@@ -4,8 +4,10 @@
 
 ## Miuul Machine Learning Summer Camp Program Flow 🦩
 Miuul Makine Öğrenmesi Yaz Kampı program akışı için [buraya](https://drive.google.com/file/d/1fjoa9fH_XqYTUa3zkBnEyRqLSrQ1mJbL/view?usp=sharing) tıklayın.
-<!--
-### Hafta1
--->
+
+## Notes I took during Miuul Machine Learning Summer Camp 📝
+Miuul Makine Öğrenmesi Yaz Kampı notlarım için [buraya](https://docs.google.com/document/d/1U-ehzlzvBUzg6DIc08JAjkLZELL-gKqpxbP7iRP8puA/edit?usp=sharing) tıklayın.
+
 ## Songs we listened to during Miuul Machine Learning Summer Camp 🎶
 Miuul Makine Öğrenmesi Yaz Kampı sayesinde keşfettiğim muhteşem şarkılar için [buraya](https://open.spotify.com/playlist/2vrop31DPLtjAF9a97Sh0f?si=a040fb7e935c46e7) tıklayın.
+
