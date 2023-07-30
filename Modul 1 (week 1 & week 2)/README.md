@@ -1,12 +1,20 @@
 ## Topics covered in this module
-Veri Yapıları
-Fonsiyonlar
-Koşullar & Döngüler
-Comprehensions
-Python ile Veri Analizi: NumPy
-Python ile Veri Analizi: Pandas
-Python ile Veri Analizi: Veri Görselleştirme
-Python ile Veri Analizi: Gelişmiş Fonksiyonel Keşifçi Veri Analizi
+✨Veri Yapıları
+
+✨Fonsiyonlar
+
+✨Koşullar & Döngüler
+
+✨Comprehensions
+
+✨Python ile Veri Analizi: NumPy
+
+✨Python ile Veri Analizi: Pandas
+
+✨Python ile Veri Analizi: Veri Görselleştirme
+
+✨Python ile Veri Analizi: Gelişmiş Fonksiyonel Keşifçi Veri Analizi
+
 
 ## Podcasts in this Module
 ### Week 1 Podcast: Vakko’da veri bilimi ve veri strateji ekibinden sorumlu olan Sümeyra ile bir saatte AI Ekosisteminin Evrimi’ni “Yapay Zeka 101” olarak adlandırabileceğimiz bir başlık altında konuşuyoruz.
