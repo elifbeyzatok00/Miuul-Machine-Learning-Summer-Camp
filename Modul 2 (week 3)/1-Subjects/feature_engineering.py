@@ -1,7 +1,22 @@
 #############################################
 # FEATURE ENGINEERING & DATA PRE-PROCESSING
 #############################################
+'''
+Applied machine learning is basically feature engineering - Andrew Ng
+(Uygulamalı makine öğrenmesi temelde değişken/özellik mühendisliğidir)
 
+Özellik Mühendisliği:
+Özellikler üzerinde gerçekleştirilen çalışmalar.
+Ham veriden değişken üretmek.
+
+Veri Ön İşleme:
+Çalışmalar öncesi verinin uygun hale getirilmesi sürecidir.
+
+Özellik Mühendsiliği, Veri önişlemenin alt basamağıdır
+
+Veri ön işleme işin büyük kısmı %80, modelleme işin küçük kısmı %20
+'''
+import missingno as missingno
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -14,28 +29,28 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder, StandardScaler, RobustScaler
 
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-pd.set_option('display.float_format', lambda x: '%.3f' % x)
-pd.set_option('display.width', 500)
+pd.set_option('display.max_columns', None)  # tüm kolonları göster
+pd.set_option('display.max_rows', None)  # tüm satırları göster
+pd.set_option('display.float_format', lambda x: '%.3f' % x)  # virgülden sonra 3 basamak göster
+pd.set_option('display.width', 500)  # eni 500 birim göster
+
 
 def load_application_train():
-    data = pd.read_csv("datasets/application_train.csv")
+    data = pd.read_csv("Modul 2 (week 3)/1-Subjects/datasets/application_train.csv")  # büyük veri
     return data
+
 
 df = load_application_train()
 df.head()
 
 
 def load():
-    data = pd.read_csv("datasets/titanic.csv")
+    data = pd.read_csv("Modul 2 (week 3)/1-Subjects/datasets/titanic.csv")  # küçük veri
     return data
 
 
 df = load()
 df.head()
-
-
 
 #############################################
 # 1. Outliers (Aykırı Değerler)
@@ -49,6 +64,8 @@ df.head()
 # Grafik Teknikle Aykırı Değerler
 ###################
 
+plt.interactive(False)
+
 sns.boxplot(x=df["Age"])
 plt.show()
 
@@ -59,19 +76,21 @@ plt.show()
 q1 = df["Age"].quantile(0.25)
 q3 = df["Age"].quantile(0.75)
 iqr = q3 - q1
-up = q3 + 1.5 * iqr
-low = q1 - 1.5 * iqr
+up = q3 + 1.5 * iqr  # üst sınır
+low = q1 - 1.5 * iqr  # alt sınır
 
-df[(df["Age"] < low) | (df["Age"] > up)]
+df[(df["Age"] < low) | (df["Age"] > up)] # belirlenen üst ve alt sınırlar dışında kalan "aykırı" değerler
 
-df[(df["Age"] < low) | (df["Age"] > up)].index
+df[(df["Age"] < low) | (df["Age"] > up)].index #aykırı değerlerin indexlerini getirir
 
 ###################
 # Aykırı Değer Var mı Yok mu?
 ###################
 
-df[(df["Age"] < low) | (df["Age"] > up)].any(axis=None)
-df[(df["Age"] < low)].any(axis=None)
+df[(df["Age"] < low) | (df["Age"] > up)].any(axis=None)  # tüm aykırı değer
+df[(df["Age"] < low)].any(axis=None) # age - olamayacağı için false döner
+# axis=None -> satır ya da sutün bazlı çalışmayacaktık tüm verilere bakacaktık bu yüzden 0/1 vermedik None dedik
+# any() ile bool türünde aykırı değer bir tane bile varsa True döner yoksa false
 
 # 1. Eşik değer belirledik.
 # 2. Aykırılara eriştik.
@@ -81,7 +100,7 @@ df[(df["Age"] < low)].any(axis=None)
 # İşlemleri Fonksiyonlaştırmak
 ###################
 
-
+# alt ve üst sınırları bulmamızı sağlayan fonksiyonu yazdık
 def outlier_thresholds(dataframe, col_name, q1=0.25, q3=0.75):
     quartile1 = dataframe[col_name].quantile(q1)
     quartile3 = dataframe[col_name].quantile(q3)
@@ -90,6 +109,7 @@ def outlier_thresholds(dataframe, col_name, q1=0.25, q3=0.75):
     low_limit = quartile1 - 1.5 * interquantile_range
     return low_limit, up_limit
 
+
 outlier_thresholds(df, "Age")
 outlier_thresholds(df, "Fare")
 
@@ -97,9 +117,10 @@ low, up = outlier_thresholds(df, "Fare")
 
 df[(df["Fare"] < low) | (df["Fare"] > up)].head()
 
-
 df[(df["Fare"] < low) | (df["Fare"] > up)].index
 
+
+# aykırı değer var mı yok mu kontrol eden fonksiyon
 def check_outlier(dataframe, col_name):
     low_limit, up_limit = outlier_thresholds(dataframe, col_name)
     if dataframe[(dataframe[col_name] > up_limit) | (dataframe[col_name] < low_limit)].any(axis=None):
@@ -107,8 +128,9 @@ def check_outlier(dataframe, col_name):
     else:
         return False
 
-check_outlier(df, "Age")
-check_outlier(df, "Fare")
+
+check_outlier(df, "Age") #True
+check_outlier(df, "Fare") #False
 
 ###################
 # grab_col_names
@@ -117,8 +139,10 @@ check_outlier(df, "Fare")
 dff = load_application_train()
 dff.head()
 
+# veri tiplerini: categorik, numeric, numeric olsa bile aslında categorik olan değişkenleri getiren fonksiyon yazalım
 def grab_col_names(dataframe, cat_th=10, car_th=20):
     """
+    cat_th=10, car_th=20'ların sayısı projeden projeye değişkenlik gösterebilir
 
     Veri setindeki kategorik, numerik ve kategorik fakat kardinal değişkenlerin isimlerini verir.
     Not: Kategorik değişkenlerin içerisine numerik görünümlü kategorik değişkenler de dahildir.
@@ -157,11 +181,12 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     """
 
     # cat_cols, cat_but_car
-    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]
-    num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and
+    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"] #categorik değişkenler
+    num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and # numerik gözüküp aslında categorik olan değişkenler(örn:survived, pclass)
                    dataframe[col].dtypes != "O"]
-    cat_but_car = [col for col in dataframe.columns if dataframe[col].nunique() > car_th and
+    cat_but_car = [col for col in dataframe.columns if dataframe[col].nunique() > car_th and # categorik gözüküp cardinal olan yani bilgi taşımayan, seyrekliği çok fazla olan, çok fazla sınıfa sahip olan değişkenler (örn: name, ticket, cabin, )
                    dataframe[col].dtypes == "O"]
+    # categorik değişkenlerin en temiz halini bulalım
     cat_cols = cat_cols + num_but_cat
     cat_cols = [col for col in cat_cols if col not in cat_but_car]
 
@@ -169,6 +194,7 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     num_cols = [col for col in dataframe.columns if dataframe[col].dtypes != "O"]
     num_cols = [col for col in num_cols if col not in num_but_cat]
 
+    # çıktı alalım
     print(f"Observations: {dataframe.shape[0]}")
     print(f"Variables: {dataframe.shape[1]}")
     print(f'cat_cols: {len(cat_cols)}')
@@ -177,20 +203,25 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     print(f'num_but_cat: {len(num_but_cat)}')
     return cat_cols, num_cols, cat_but_car
 
+''' df-titanic yani küçük olan veri setiydi burada çalışalım '''
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
+# PassengerId'yi pek sevmiyormuş Vahit hocam kalabalık yapmasın diye numericler içinden çıkarttık
 num_cols = [col for col in num_cols if col not in "PassengerId"]
 
+# ayrık değerleri bulalım
 for col in num_cols:
     print(col, check_outlier(df, col))
 
-
+''' dff- yani büyük olan veri setiydi burada çalışalım '''
 cat_cols, num_cols, cat_but_car = grab_col_names(dff)
 
-num_cols = [col for col in num_cols if col not in "SK_ID_CURR"]
-
+#aykırı değer var mı bakalım
 for col in num_cols:
     print(col, check_outlier(dff, col))
+
+#SK_ID_CURR aykırı değerdi kaldırmak istedik kaldıralım
+num_cols = [col for col in num_cols if col not in "SK_ID_CURR"]
 
 ###################
 # Aykırı Değerlerin Kendilerine Erişmek
@@ -208,12 +239,12 @@ def grab_outliers(dataframe, col_name, index=False):
         outlier_index = dataframe[((dataframe[col_name] < low) | (dataframe[col_name] > up))].index
         return outlier_index
 
+
 grab_outliers(df, "Age")
 
 grab_outliers(df, "Age", True)
 
 age_index = grab_outliers(df, "Age", True)
-
 
 outlier_thresholds(df, "Age")
 check_outlier(df, "Age")
@@ -231,6 +262,7 @@ low, up = outlier_thresholds(df, "Fare")
 df.shape
 
 df[~((df["Fare"] < low) | (df["Fare"] > up))].shape
+
 
 def remove_outlier(dataframe, col_name):
     low_limit, up_limit = outlier_thresholds(dataframe, col_name)
@@ -263,10 +295,12 @@ df.loc[(df["Fare"] > up), "Fare"] = up
 
 df.loc[(df["Fare"] < low), "Fare"] = low
 
+
 def replace_with_thresholds(dataframe, variable):
     low_limit, up_limit = outlier_thresholds(dataframe, variable)
     dataframe.loc[(dataframe[variable] < low_limit), variable] = low_limit
     dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
+
 
 df = load()
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
@@ -283,7 +317,6 @@ for col in num_cols:
 for col in num_cols:
     print(col, check_outlier(df, col))
 
-
 ###################
 # Recap
 ###################
@@ -296,9 +329,6 @@ grab_outliers(df, "Age", index=True)
 remove_outlier(df, "Age").shape
 replace_with_thresholds(df, "Age")
 check_outlier(df, "Age")
-
-
-
 
 #############################################
 # Çok Değişkenli Aykırı Değer Analizi: Local Outlier Factor
@@ -313,7 +343,6 @@ df.head()
 df.shape
 for col in df.columns:
     print(col, check_outlier(df, col))
-
 
 low, up = outlier_thresholds(df, "carat")
 
@@ -341,13 +370,11 @@ df[df_scores < th]
 
 df[df_scores < th].shape
 
-
 df.describe([0.01, 0.05, 0.75, 0.90, 0.99]).T
 
 df[df_scores < th].index
 
 df[df_scores < th].drop(axis=0, labels=df[df_scores < th].index)
-
 
 #############################################
 # Missing Values (Eksik Değerler)
@@ -402,7 +429,6 @@ missing_values_table(df)
 
 missing_values_table(df, True)
 
-
 #############################################
 # Eksik Değer Problemini Çözme
 #############################################
@@ -449,9 +475,9 @@ df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum()
 
 df.groupby("Sex")["Age"].mean()["female"]
 
-df.loc[(df["Age"].isnull()) & (df["Sex"]=="female"), "Age"] = df.groupby("Sex")["Age"].mean()["female"]
+df.loc[(df["Age"].isnull()) & (df["Sex"] == "female"), "Age"] = df.groupby("Sex")["Age"].mean()["female"]
 
-df.loc[(df["Age"].isnull()) & (df["Sex"]=="male"), "Age"] = df.groupby("Sex")["Age"].mean()["male"]
+df.loc[(df["Age"].isnull()) & (df["Sex"] == "male"), "Age"] = df.groupby("Sex")["Age"].mean()["male"]
 
 df.isnull().sum()
 
@@ -472,9 +498,9 @@ scaler = MinMaxScaler()
 dff = pd.DataFrame(scaler.fit_transform(dff), columns=dff.columns)
 dff.head()
 
-
 # knn'in uygulanması.
 from sklearn.impute import KNNImputer
+
 imputer = KNNImputer(n_neighbors=5)
 dff = pd.DataFrame(imputer.fit_transform(dff), columns=dff.columns)
 dff.head()
@@ -485,7 +511,6 @@ df["age_imputed_knn"] = dff[["Age"]]
 
 df.loc[df["Age"].isnull(), ["Age", "age_imputed_knn"]]
 df.loc[df["Age"].isnull()]
-
 
 ###################
 # Recap
@@ -501,8 +526,6 @@ df.apply(lambda x: x.fillna(x.mode()[0]) if (x.dtype == "O" and len(x.unique()) 
 # kategorik değişken kırılımında sayısal değişkenleri doldurmak
 df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum()
 # Tahmine Dayalı Atama ile Doldurma
-
-
 
 
 #############################################
@@ -545,8 +568,6 @@ def missing_vs_target(dataframe, target, na_columns):
 
 missing_vs_target(df, "Survived", na_cols)
 
-
-
 ###################
 # Recap
 ###################
@@ -561,10 +582,6 @@ df.apply(lambda x: x.fillna(x.mode()[0]) if (x.dtype == "O" and len(x.unique()) 
 df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum()
 # Tahmine Dayalı Atama ile Doldurma
 missing_vs_target(df, "Survived", na_cols)
-
-
-
-
 
 #############################################
 # 3. Encoding (Label Encoding, One-Hot Encoding, Rare Encoding)
@@ -582,10 +599,12 @@ le = LabelEncoder()
 le.fit_transform(df["Sex"])[0:5]
 le.inverse_transform([0, 1])
 
+
 def label_encoder(dataframe, binary_col):
     labelencoder = LabelEncoder()
     dataframe[binary_col] = labelencoder.fit_transform(dataframe[binary_col])
     return dataframe
+
 
 df = load()
 
@@ -605,10 +624,8 @@ binary_cols = [col for col in df.columns if df[col].dtype not in [int, float]
 
 df[binary_cols].head()
 
-
 for col in binary_cols:
     label_encoder(df, col)
-
 
 df = load()
 df["Embarked"].value_counts()
@@ -631,16 +648,17 @@ pd.get_dummies(df, columns=["Embarked"], dummy_na=True).head()
 
 pd.get_dummies(df, columns=["Sex", "Embarked"], drop_first=True).head()
 
+
 def one_hot_encoder(dataframe, categorical_cols, drop_first=True):
     dataframe = pd.get_dummies(dataframe, columns=categorical_cols, drop_first=drop_first)
     return dataframe
+
 
 df = load()
 
 # cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
 ohe_cols = [col for col in df.columns if 10 >= df[col].nunique() > 2]
-
 
 one_hot_encoder(df, ohe_cols).head()
 
@@ -662,6 +680,7 @@ df = load_application_train()
 df["NAME_EDUCATION_TYPE"].value_counts()
 
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
+
 
 def cat_summary(dataframe, col_name, plot=False):
     print(pd.DataFrame({col_name: dataframe[col_name].value_counts(),
@@ -691,7 +710,9 @@ def rare_analyser(dataframe, target, cat_cols):
                             "RATIO": dataframe[col].value_counts() / len(dataframe),
                             "TARGET_MEAN": dataframe.groupby(col)[target].mean()}), end="\n\n\n")
 
+
 rare_analyser(df, "TARGET", cat_cols)
+
 
 #############################################
 # 3. Rare encoder'ın yazılması.
@@ -710,12 +731,12 @@ def rare_encoder(dataframe, rare_perc):
 
     return temp_df
 
+
 new_df = rare_encoder(df, 0.01)
 
 rare_analyser(new_df, "TARGET", cat_cols)
 
 df["OCCUPATION_TYPE"].value_counts()
-
 
 #############################################
 # Feature Scaling (Özellik Ölçeklendirme)
@@ -729,7 +750,6 @@ df = load()
 ss = StandardScaler()
 df["Age_standard_scaler"] = ss.fit_transform(df[["Age"]])
 df.head()
-
 
 ###################
 # RobustScaler: Medyanı çıkar iqr'a böl.
@@ -754,6 +774,7 @@ df.head()
 
 age_cols = [col for col in df.columns if "Age" in col]
 
+
 def num_summary(dataframe, numerical_col, plot=False):
     quantiles = [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 0.99]
     print(dataframe[numerical_col].describe(quantiles).T)
@@ -763,6 +784,7 @@ def num_summary(dataframe, numerical_col, plot=False):
         plt.xlabel(numerical_col)
         plt.title(numerical_col)
         plt.show(block=True)
+
 
 for col in age_cols:
     num_summary(df, col, plot=True)
@@ -789,7 +811,6 @@ df["NEW_CABIN_BOOL"] = df["Cabin"].notnull().astype('int')
 
 df.groupby("NEW_CABIN_BOOL").agg({"Survived": "mean"})
 
-
 from statsmodels.stats.proportion import proportions_ztest
 
 test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_CABIN_BOOL"] == 1, "Survived"].sum(),
@@ -800,12 +821,10 @@ test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_CABIN_BOOL"] == 1, "
 
 print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
 
-
 df.loc[((df['SibSp'] + df['Parch']) > 0), "NEW_IS_ALONE"] = "NO"
 df.loc[((df['SibSp'] + df['Parch']) == 0), "NEW_IS_ALONE"] = "YES"
 
 df.groupby("NEW_IS_ALONE").agg({"Survived": "mean"})
-
 
 test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_IS_ALONE"] == "YES", "Survived"].sum(),
                                              df.loc[df["NEW_IS_ALONE"] == "NO", "Survived"].sum()],
@@ -839,7 +858,7 @@ df["NEW_NAME_WORD_COUNT"] = df["Name"].apply(lambda x: len(str(x).split(" ")))
 
 df["NEW_NAME_DR"] = df["Name"].apply(lambda x: len([x for x in x.split() if x.startswith("Dr")]))
 
-df.groupby("NEW_NAME_DR").agg({"Survived": ["mean","count"]})
+df.groupby("NEW_NAME_DR").agg({"Survived": ["mean", "count"]})
 
 ###################
 # Regex ile Değişken Türetmek
@@ -848,7 +867,6 @@ df.groupby("NEW_NAME_DR").agg({"Survived": ["mean","count"]})
 df.head()
 
 df['NEW_TITLE'] = df.Name.str.extract(' ([A-Za-z]+)\.', expand=False)
-
 
 df[["NEW_TITLE", "Survived", "Age"]].groupby(["NEW_TITLE"]).agg({"Survived": "mean", "Age": ["count", "mean"]})
 
@@ -873,7 +891,6 @@ dff['year_diff'] = date.today().year - dff['Timestamp'].dt.year
 
 # month diff (iki tarih arasındaki ay farkı): yıl farkı + ay farkı
 dff['month_diff'] = (date.today().year - dff['Timestamp'].dt.year) * 12 + date.today().month - dff['Timestamp'].dt.month
-
 
 # day name
 dff['day_name'] = dff['Timestamp'].dt.day_name()
@@ -905,11 +922,9 @@ df.loc[(df['SEX'] == 'female') & (df['Age'] > 21) & (df['Age'] < 50), 'NEW_SEX_C
 
 df.loc[(df['SEX'] == 'female') & (df['Age'] >= 50), 'NEW_SEX_CAT'] = 'seniorfemale'
 
-
 df.head()
 
 df.groupby("NEW_SEX_CAT")["Survived"].mean()
-
 
 #############################################
 # Titanic Uçtan Uca Feature Engineering & Data Preprocessing
@@ -985,9 +1000,7 @@ df.drop("CABIN", inplace=True, axis=1)
 remove_cols = ["TICKET", "NAME"]
 df.drop(remove_cols, inplace=True, axis=1)
 
-
 df["AGE"] = df["AGE"].fillna(df.groupby("NEW_TITLE")["AGE"].transform("median"))
-
 
 df["NEW_AGE_PCLASS"] = df["AGE"] * df["PCLASS"]
 
@@ -1002,7 +1015,6 @@ df.loc[(df['Sex'] == 'female') & (df['Age'] <= 21), 'NEW_SEX_CAT'] = 'youngfemal
 df.loc[(df['Sex'] == 'female') & (df['Age'] > 21) & (df['Age'] < 50), 'NEW_SEX_CAT'] = 'maturefemale'
 df.loc[(df['Sex'] == 'female') & (df['Age'] >= 50), 'NEW_SEX_CAT'] = 'seniorfemale'
 
-
 df = df.apply(lambda x: x.fillna(x.mode()[0]) if (x.dtype == "O" and len(x.unique()) <= 10) else x, axis=0)
 
 #############################################
@@ -1015,13 +1027,11 @@ binary_cols = [col for col in df.columns if df[col].dtype not in [int, float]
 for col in binary_cols:
     df = label_encoder(df, col)
 
-
 #############################################
 # 5. Rare Encoding
 #############################################
 
 rare_analyser(df, "SURVIVED", cat_cols)
-
 
 df = rare_encoder(df, 0.01)
 
@@ -1037,7 +1047,6 @@ df = one_hot_encoder(df, ohe_cols)
 
 df.head()
 df.shape
-
 
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
@@ -1061,7 +1070,6 @@ df[num_cols].head()
 
 df.head()
 df.shape
-
 
 #############################################
 # 8. Model
@@ -1092,6 +1100,7 @@ rf_model = RandomForestClassifier(random_state=46).fit(X_train, y_train)
 y_pred = rf_model.predict(X_test)
 accuracy_score(y_pred, y_test)
 
+
 # Yeni ürettiğimiz değişkenler ne alemde?
 
 def plot_importance(model, features, num=len(X), save=False):
@@ -1099,7 +1108,7 @@ def plot_importance(model, features, num=len(X), save=False):
     plt.figure(figsize=(10, 10))
     sns.set(font_scale=1)
     sns.barplot(x="Value", y="Feature", data=feature_imp.sort_values(by="Value",
-                                                                      ascending=False)[0:num])
+                                                                     ascending=False)[0:num])
     plt.title('Features')
     plt.tight_layout()
     plt.show()
@@ -1108,5 +1117,3 @@ def plot_importance(model, features, num=len(X), save=False):
 
 
 plot_importance(rf_model, X_train)
-
-
