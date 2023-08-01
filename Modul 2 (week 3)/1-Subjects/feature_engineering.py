@@ -79,16 +79,18 @@ iqr = q3 - q1
 up = q3 + 1.5 * iqr  # üst sınır
 low = q1 - 1.5 * iqr  # alt sınır
 
-df[(df["Age"] < low) | (df["Age"] > up)] # belirlenen üst ve alt sınırlar dışında kalan "aykırı" değerler
+df[(df["Age"] < low) | (df["Age"] > up)]  # belirlenen üst ve alt sınırlar dışında kalan "aykırı" değerler
 
-df[(df["Age"] < low) | (df["Age"] > up)].index #aykırı değerlerin indexlerini getirir
+df[(df["Age"] < low) | (df["Age"] > up)].index  # aykırı değerlerin indexlerini getirir
 
 ###################
 # Aykırı Değer Var mı Yok mu?
 ###################
 
 df[(df["Age"] < low) | (df["Age"] > up)].any(axis=None)  # tüm aykırı değer
-df[(df["Age"] < low)].any(axis=None) # age - olamayacağı için false döner
+df[(df["Age"] < low)].any(axis=None)  # age - olamayacağı için false döner
+
+
 # axis=None -> satır ya da sutün bazlı çalışmayacaktık tüm verilere bakacaktık bu yüzden 0/1 vermedik None dedik
 # any() ile bool türünde aykırı değer bir tane bile varsa True döner yoksa false
 
@@ -129,8 +131,8 @@ def check_outlier(dataframe, col_name):
         return False
 
 
-check_outlier(df, "Age") #True
-check_outlier(df, "Fare") #False
+check_outlier(df, "Age")  # True
+check_outlier(df, "Fare")  # False
 
 ###################
 # grab_col_names
@@ -138,6 +140,7 @@ check_outlier(df, "Fare") #False
 
 dff = load_application_train()
 dff.head()
+
 
 # veri tiplerini: categorik, numeric, numeric olsa bile aslında categorik olan değişkenleri getiren fonksiyon yazalım
 def grab_col_names(dataframe, cat_th=10, car_th=20):
@@ -181,10 +184,12 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     """
 
     # cat_cols, cat_but_car
-    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"] #categorik değişkenler
-    num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and # numerik gözüküp aslında categorik olan değişkenler(örn:survived, pclass)
+    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]  # categorik değişkenler
+    num_but_cat = [col for col in dataframe.columns if dataframe[
+        col].nunique() < cat_th and  # numerik gözüküp aslında categorik olan değişkenler(örn:survived, pclass)
                    dataframe[col].dtypes != "O"]
-    cat_but_car = [col for col in dataframe.columns if dataframe[col].nunique() > car_th and # categorik gözüküp cardinal olan yani bilgi taşımayan, seyrekliği çok fazla olan, çok fazla sınıfa sahip olan değişkenler (örn: name, ticket, cabin, )
+    cat_but_car = [col for col in dataframe.columns if dataframe[
+        col].nunique() > car_th and  # categorik gözüküp cardinal olan yani bilgi taşımayan, seyrekliği çok fazla olan, çok fazla sınıfa sahip olan değişkenler (örn: name, ticket, cabin, )
                    dataframe[col].dtypes == "O"]
     # categorik değişkenlerin en temiz halini bulalım
     cat_cols = cat_cols + num_but_cat
@@ -203,6 +208,7 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     print(f'num_but_cat: {len(num_but_cat)}')
     return cat_cols, num_cols, cat_but_car
 
+
 ''' df-titanic yani küçük olan veri setiydi burada çalışalım '''
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
@@ -216,12 +222,13 @@ for col in num_cols:
 ''' dff- yani büyük olan veri setiydi burada çalışalım '''
 cat_cols, num_cols, cat_but_car = grab_col_names(dff)
 
-#aykırı değer var mı bakalım
+# aykırı değer var mı bakalım
 for col in num_cols:
     print(col, check_outlier(dff, col))
 
-#SK_ID_CURR aykırı değerdi kaldırmak istedik kaldıralım
+# SK_ID_CURR aykırı değerdi kaldırmak istedik kaldıralım
 num_cols = [col for col in num_cols if col not in "SK_ID_CURR"]
+
 
 ###################
 # Aykırı Değerlerin Kendilerine Erişmek
@@ -291,9 +298,10 @@ df[((df["Fare"] < low) | (df["Fare"] > up))]["Fare"]
 
 df.loc[((df["Fare"] < low) | (df["Fare"] > up)), "Fare"]
 
-df.loc[(df["Fare"] > up), "Fare"] = up
+df.loc[(df["Fare"] > up), "Fare"] = up  # üst sınırlar için baskılama -> örn 100 üzerindeki değerleri bulduk
+# bulduğumuz 100 üzerindeki değerlere 100 yazdık, baskıladık
 
-df.loc[(df["Fare"] < low), "Fare"] = low
+df.loc[(df["Fare"] < low), "Fare"] = low  # alt sınırlar için baskılama
 
 
 def replace_with_thresholds(dataframe, variable):
@@ -322,13 +330,13 @@ for col in num_cols:
 ###################
 
 df = load()
-outlier_thresholds(df, "Age")
-check_outlier(df, "Age")
-grab_outliers(df, "Age", index=True)
+outlier_thresholds(df, "Age")       #önemli fonksiyon # 1- aykırı değeri sapta, aykırı değeri saptamak için gerekli thresholdları çıkarttık
+check_outlier(df, "Age")                              # 2- thresholdlara göre outlier var mı sorduk
+grab_outliers(df, "Age", index=True)                  # 3- outlierları bize getir dedik
 
-remove_outlier(df, "Age").shape
-replace_with_thresholds(df, "Age")
-check_outlier(df, "Age")
+remove_outlier(df, "Age").shape                       # 4- tedavi edelim bu outlierları atarak
+replace_with_thresholds(df, "Age")   #önemli fonksiyon # 5- thresholdlarla değiştir. Yani baskılama işlemlerini kullan dedik (atama yapmaya gerek yok, loc yapısı sayesinde kalıcı değişiklik yapmamızı sağlar)
+check_outlier(df, "Age")                              # 6- outlierları tekrar gözlemledik ve aykırılardan kurtulmuş olduğumuzu gördük
 
 #############################################
 # Çok Değişkenli Aykırı Değer Analizi: Local Outlier Factor
@@ -336,28 +344,49 @@ check_outlier(df, "Age")
 
 # 17, 3
 
+#LOF Yöntemi: Çok değişkenli aykırı değer belirleme yöntemi. (yoğunluklara göre komşuluk belirler)
+#Gözlemleri bulundukları konumda yoğunluk tabanlı skorlayarak buna göre aykırı değer olabilecek değerleri tanıma imkanı sağlar
+#bir noktanın local yoğunluğu: etrafındaki komşuluklar demektir
+#Eğer bir nokta komşularının yoğunluğundan anlamlı şekilde düşük ise bu nokta daha seyrek bir bölgededir. Yani bu aykırı değer olabilir yorumu yapılır
+
+#2560px-LOF-idea.svg (outlier)-> A noktasının yoğunluğu komşularının local yoğunluklarından oldukça farklıdır,düşüktür. Bu yüzden A noktasına aykırı değer muammelesi yapılır
+#2880px-LOF.svg      (inlier)-> LOF yöntemi der ki size bir skor vericem, benden aldığınız skor 1'e ne kadar yakın olursa o kadar iyidir der. Dolayısıyla 1'den uzaklaştıkça ilgili gözlemin outlier olma ihtimali artar der. Görseldeki küçük noktalar inlier; büyük olanlar(skore'u 1'den uzaklaşmış olanlar) outlier olabileceği fikrini verir
+#verdiğim treshold değerine göre outlier, inlier değişebilir. Dolayısıyla LOf yöntemi treshold yöntemi olarak da bize müdahale etme imkanı sağlar
+#2880px-LOF.svg veri seti iki boyuta indirgenmiş, görselleştirilmiş -> PCA yöntemi(Temel bileşen analizi yöntemi) ile geliştirilebilir
+
 df = sns.load_dataset('diamonds')
-df = df.select_dtypes(include=['float64', 'int64'])
-df = df.dropna()
+df = df.select_dtypes(include=['float64', 'int64'])  #sadece sayısal değişkenleri seç
+df = df.dropna() #eksik değerleri drop ederek getir
 df.head()
 df.shape
+
+#bu datafream'de aykırı değer var mı soralım
 for col in df.columns:
     print(col, check_outlier(df, col))
 
+#aykırı değere sahip değişkenlerden 1 tanesini seç,
 low, up = outlier_thresholds(df, "carat")
 
-df[((df["carat"] < low) | (df["carat"] > up))].shape
+#kaç outlier var bakalım
+df[((df["carat"] < low) | (df["carat"] > up))].shape # (53940, 7) ->53940 aykırı varmış çok fazla
 
 low, up = outlier_thresholds(df, "depth")
+df[((df["depth"] < low) | (df["depth"] > up))].shape # (2545, 7) -> 2545  aykırı varmış çok fazla
+'''
+literatürde outliers treshold 27'e 75'tir ama
+Vahit Keskin bunu 5'e 95 kullanır. Çünkü ucundan trash yapmak(veri silmek) gerek
+Diğer türlü tortu yaratırız, kendi kendimize veri setine gürültü ekleriz.
+!ağaç yöntemleri kullanıyorsak hiç dokunmamayı tercih etmeliyiz.
+Ya da çok ucundan treshla örneğin outliers treshold u 5'e 95 kullan
+'''
 
-df[((df["depth"] < low) | (df["depth"] > up))].shape
-
+# n_neighbors=20'deki 20 opsiyoneldir. farklı rakam yazılabilr. Ama öntanımlı değer 20'dir
 clf = LocalOutlierFactor(n_neighbors=20)
-clf.fit_predict(df)
+clf.fit_predict(df) #hesaplamaları yaptık
 
-df_scores = clf.negative_outlier_factor_
-df_scores[0:5]
-# df_scores = -df_scores
+df_scores = clf.negative_outlier_factor_ # skorları tutalım
+df_scores[0:5]  #skorlar negatif
+# df_scores = -df_scores  #istersek pozitifie çevirebiliriz
 np.sort(df_scores)[0:5]
 
 scores = pd.DataFrame(np.sort(df_scores))
