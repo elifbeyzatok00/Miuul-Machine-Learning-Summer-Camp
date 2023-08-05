@@ -93,6 +93,7 @@ df[(df["Age"] < low)].any(axis=None)  # age - olamayacağı için false döner
 
 # axis=None -> satır ya da sutün bazlı çalışmayacaktık tüm verilere bakacaktık bu yüzden 0/1 vermedik None dedik
 # any() ile bool türünde aykırı değer bir tane bile varsa True döner yoksa false
+# any() ile bool türünde aykırı değer bir tane bile varsa True döner yoksa false
 
 # 1. Eşik değer belirledik.
 # 2. Aykırılara eriştik.
@@ -341,8 +342,8 @@ check_outlier(df, "Age")                              # 6- outlierları tekrar g
 #############################################
 # Çok Değişkenli Aykırı Değer Analizi: Local Outlier Factor
 #############################################
-
-# 17, 3
+# Çok Değişkenli Aykırı Değer, tek başına anlamlı olsa da bir araya gelince anlamını kaybeden değişken grupları
+# örneğin 17 yaşında 3 evlilik
 
 #LOF Yöntemi: Çok değişkenli aykırı değer belirleme yöntemi. (yoğunluklara göre komşuluk belirler)
 #Gözlemleri bulundukları konumda yoğunluk tabanlı skorlayarak buna göre aykırı değer olabilecek değerleri tanıma imkanı sağlar
@@ -426,7 +427,7 @@ df.isnull().sum()
 df.notnull().sum()
 
 # veri setindeki toplam eksik deger sayisi
-df.isnull().sum().sum()
+df.isnull().sum().sum() # kendisinde en az 1 eksik olan satır sayısı
 
 # en az bir tane eksik degere sahip olan gözlem birimleri
 df[df.isnull().any(axis=1)]
@@ -477,9 +478,10 @@ df["Age"].fillna(df["Age"].mean()).isnull().sum()
 df["Age"].fillna(df["Age"].median()).isnull().sum()
 df["Age"].fillna(0).isnull().sum()
 
-# df.apply(lambda x: x.fillna(x.mean()), axis=0)
+# df.apply(lambda x: x.fillna(x.mean()), axis=0)  # bu hata verir çünkü tüm değişkenleri sayısal şekilde doldur diyor
 
-df.apply(lambda x: x.fillna(x.mean()) if x.dtype != "O" else x, axis=0).head()
+# aşağıdakiler hata vermez çünkü object değilse numerikse tüm değişkenleri sayısal şekilde doldur diyor
+df.apply(lambda x: x.fillna(x.mean()) if x.dtype != "O" else x, axis=0).head() # normalde axis=0 sütunları ifade eder ama burada odağımız tüm satırlara bakmak -> yani sütunun ortalamasını alıcam bu da aşağı doğru satırlara odaklan demek
 
 dff = df.apply(lambda x: x.fillna(x.mean()) if x.dtype != "O" else x, axis=0)
 
@@ -500,13 +502,16 @@ df.groupby("Sex")["Age"].mean()
 
 df["Age"].mean()
 
-df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum()
+df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum() # transform group by a göre  atama yapacacak. eğer yaş değişkeni boşsa yaşların ortalamasını atar boş yaş değerlerine
 
-df.groupby("Sex")["Age"].mean()["female"]
+# daha açık hali
+df.groupby("Sex")["Age"].mean()["female"] #kadınların yaş ortalaması
 
 df.loc[(df["Age"].isnull()) & (df["Sex"] == "female"), "Age"] = df.groupby("Sex")["Age"].mean()["female"]
+# label based olarak - yaşı boş ve cinsiyeti kadın olanlara                         kadınların yaş ortalamasını ata
 
 df.loc[(df["Age"].isnull()) & (df["Sex"] == "male"), "Age"] = df.groupby("Sex")["Age"].mean()["male"]
+# label based olarak - yaşı boş ve cinsiyeti erkek olanlara                         erkeklerin yaş ortalamasını ata
 
 df.isnull().sum()
 
@@ -518,38 +523,51 @@ df = load()
 
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 num_cols = [col for col in num_cols if col not in "PassengerId"]
+# label encoding, one hot encoding işlemi yapmamız gerek. ikisini de aynı aynada uygulayabilmek için get_dummies metodu kullanalım :
 dff = pd.get_dummies(df[cat_cols + num_cols], drop_first=True)
+# get_dummies sadece kategorik değişkenlere dönüşüm uygular
+# drop_first=True -> 2 kategorik sınıfa ait değişkenelrin ilk sınıfını atacak ikinci sınıfını tutacak. binary (numeric) olarak hafızada tutacak
 
 dff.head()
 
 # değişkenlerin standartlatırılması
 scaler = MinMaxScaler()
 dff = pd.DataFrame(scaler.fit_transform(dff), columns=dff.columns)
+# scaler ile değerleri 0-1 arasında dönüştür
+# (scaler.fit_transform(dff) dönüştürme işleminden sonra veri istediğimiz formatta olmayacağı için
+# columns=dff.columns ile dataframe e çevirip df in adını dff.columns'tan alıyoruz
 dff.head()
 
 # knn'in uygulanması.
+# ML yöntemi ile tahmine dayalı şekilde eksik değerleri doldurma imkanı sağlar
 from sklearn.impute import KNNImputer
 
-imputer = KNNImputer(n_neighbors=5)
+imputer = KNNImputer(n_neighbors=5) # model nesnemizi oluşturalım, komşuluk sayısını 5 verdik
 dff = pd.DataFrame(imputer.fit_transform(dff), columns=dff.columns)
+# knn yöntemi, bana arkadaşını söyle sana kim olduğunu söyleyeyim der.
+# uzaklık temellidir. komşulara bakar, komşulardan ilgili eksikliğe sahip en yakın örneğin 5 tanesini bulur bunların dolu olan gözlemlerinin ortalamasını atar
 dff.head()
 
-dff = pd.DataFrame(scaler.inverse_transform(dff), columns=dff.columns)
+# doldurduğum değerlerde de problem var. standartlaştırma işleminden dolayı değerler 0-1 arasında ve gerçek değerleri yok
+# kıyaslamaya gidicem ama kıyaslamya gitmeden bu standartlaştırma işlemini geri almam gerek
+#bu  yüzden standartlaştırm aişlemini geri almamız gerekecek
+dff = pd.DataFrame(scaler.inverse_transform(dff), columns=dff.columns) # scaler.inverse_transform(dff) ile eski haline dolu haline çevirdik
+#evet ben boşlıkları doldrudum ama eski haliyle kıyaslamka istediğimde nasıl yapıcam
 
-df["age_imputed_knn"] = dff[["Age"]]
+df["age_imputed_knn"] = dff[["Age"]] # ilk df teki ageler
 
-df.loc[df["Age"].isnull(), ["Age", "age_imputed_knn"]]
-df.loc[df["Age"].isnull()]
+df.loc[df["Age"].isnull(), ["Age", "age_imputed_knn"]] #ilk df teki null olan ageler ve yeni atamalar yaptığım ageleri getir kıyaslayalım
+df.loc[df["Age"].isnull()] # bütün değişkenleri görüp detaylı şekilde incelemek için
 
 ###################
 # Recap
 ###################
 
-df = load()
+df = load()  ## veriyi yükledik
 # missing table
-missing_values_table(df)
+missing_values_table(df) ## eksik verileri raporladık
 # sayısal değişkenleri direk median ile oldurma
-df.apply(lambda x: x.fillna(x.median()) if x.dtype != "O" else x, axis=0).isnull().sum()
+df.apply(lambda x: x.fillna(x.median()) if x.dtype != "O" else x, axis=0).isnull().sum() ## sayısal değişkenleri ortalama ya da median ile doldurduk
 # kategorik değişkenleri mode ile doldurma
 df.apply(lambda x: x.fillna(x.mode()[0]) if (x.dtype == "O" and len(x.unique()) <= 10) else x, axis=0).isnull().sum()
 # kategorik değişken kırılımında sayısal değişkenleri doldurmak
@@ -565,13 +583,15 @@ df["Age"].fillna(df.groupby("Sex")["Age"].transform("mean")).isnull().sum()
 # Eksik Veri Yapısının İncelenmesi
 ###################
 
-msno.bar(df)
+msno.bar(df)  #missing no kütüphanesini çağır titanic veri setini ifade eden df e bunu uyguluyoruz
+plt.show()  # veri sayısı tam olanları grafik ile verir
+
+msno.matrix(df)  # çizikler ve boşluklar var age ve cabinde
 plt.show()
 
-msno.matrix(df)
-plt.show()
-
-msno.heatmap(df)
+# eksik değerlerin belli bir korelasyonla ortaya çıkıp çıkmadığını araştırıyoruz
+# senaryolar: eksiklerin birlikte çıkması, belirli bir değişkene bağımlı olarak çıkması
+msno.heatmap(df) # nuality korelation
 plt.show()
 
 ###################
@@ -582,11 +602,12 @@ missing_values_table(df, True)
 na_cols = missing_values_table(df, True)
 
 
-def missing_vs_target(dataframe, target, na_columns):
-    temp_df = dataframe.copy()
+# target survived olacak
+def missing_vs_target(dataframe, target, na_columns): # survived değişkeni ile bu eksikliğe sahip olan değişkenleri karşılaştır
+    temp_df = dataframe.copy()  #  temp_df, na_columns içeren yeni df
 
     for col in na_columns:
-        temp_df[col + '_NA_FLAG'] = np.where(temp_df[col].isnull(), 1, 0)
+        temp_df[col + '_NA_FLAG'] = np.where(temp_df[col].isnull(), 1, 0) # na olan yerler 1 olmayan 0
 
     na_flags = temp_df.loc[:, temp_df.columns.str.contains("_NA_")].columns
 
@@ -625,8 +646,10 @@ df.head()
 df["Sex"].head()
 
 le = LabelEncoder()
-le.fit_transform(df["Sex"])[0:5]
-le.inverse_transform([0, 1])
+le.fit_transform(df["Sex"])[0:5] # df["Sex"] labelencoder nesnesi, label encoder nesnesini fit et ve transform et dönüştür.
+# alfabetik sıraya göre 1 ve sıfır verilir. female, male -> 1, 0
+
+le.inverse_transform([0, 1]) # 0 ve 1 in karşılığı neymiş görememizi sağlar
 
 
 def label_encoder(dataframe, binary_col):
@@ -648,18 +671,23 @@ df.head()
 df = load_application_train()
 df.shape
 
-binary_cols = [col for col in df.columns if df[col].dtype not in [int, float]
-               and df[col].nunique() == 2]
 
-df[binary_cols].head()
+# bir değişken int/foalt olup 2 sınıfı varsa zaten binary encode edilmiş onlarla ilgilenmiyorum
+binary_cols = [col for col in df.columns if df[col].dtype not in [int, float]  # int/float olmayanları seçiyorum
+               and df[col].nunique() == 2]   # ve number unique sayısı 2 olanları seçiyorum
+# nununique kullandık çünkü eksik değeri sınıf olarak görmez. unique ise eksik değeri sınıf olarak görürdü bu yüzden onu kullanmadık
+
+
+df[binary_cols].head() # sadece binary olan değişkenleri inceleyelim
 
 for col in binary_cols:
     label_encoder(df, col)
+# burada sinsi bir durum var bir değişkende eksikler vardı ve labelencoderdan geçirince bu eksikleri de doldurmuş
 
 df = load()
 df["Embarked"].value_counts()
-df["Embarked"].nunique()
-len(df["Embarked"].unique())
+df["Embarked"].nunique() #sınıf sayısını verdi
+len(df["Embarked"].unique()) # eşsiz değerleri getirir. nan da içinde var
 
 #############################################
 # One-Hot Encoding
@@ -670,13 +698,19 @@ df.head()
 df["Embarked"].value_counts()
 
 pd.get_dummies(df, columns=["Embarked"]).head()
+# get_dummies, (bana bir df söyle, bu df'de dönüştürmek istediğin sütunların adını söyle) der
+# ve sadece ilgili sütunlarda dönüştürme yapar diğerleri aynı kalır
 
 pd.get_dummies(df, columns=["Embarked"], drop_first=True).head()
+# değişkenler birbiri üzerinde türetilebilir olmasın diye drop_first=True yapıcaz. alfabetik olarak ilk sıra hangisiyse onu siler
 
 pd.get_dummies(df, columns=["Embarked"], dummy_na=True).head()
+# ilgili değişkendeki eksik değerler de gelsin diye dummy_na=True kullanıcaz
 
 pd.get_dummies(df, columns=["Sex", "Embarked"], drop_first=True).head()
-
+# get dummies kullanarak hem label encoding(iki sınıflı değişken olduğu için binary encoding)
+#hem  de onehotencoding işlemi yapabiliyoruz.
+# zaten bir değişkenin sınıf sayısı 2yse drop_first=True ile encoding edilmiş oluyor
 
 def one_hot_encoder(dataframe, categorical_cols, drop_first=True):
     dataframe = pd.get_dummies(dataframe, columns=categorical_cols, drop_first=drop_first)
@@ -687,7 +721,8 @@ df = load()
 
 # cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
-ohe_cols = [col for col in df.columns if 10 >= df[col].nunique() > 2]
+ohe_cols = [col for col in df.columns if 10 >= df[col].nunique() > 2] #eşsiz değer sayısı 2'den büyük ve değişken sayısı 10'dan büyük ve eşitse alalım
+# ohe_cols -> onehotencoding cols
 
 one_hot_encoder(df, ohe_cols).head()
 
@@ -729,7 +764,7 @@ for col in cat_cols:
 
 df["NAME_INCOME_TYPE"].value_counts()
 
-df.groupby("NAME_INCOME_TYPE")["TARGET"].mean()
+df.groupby("NAME_INCOME_TYPE")["TARGET"].mean() # categorik değişkenlerin durumunu target açısından değerlendiriyoruz
 
 
 def rare_analyser(dataframe, target, cat_cols):
@@ -748,15 +783,15 @@ rare_analyser(df, "TARGET", cat_cols)
 #############################################
 
 def rare_encoder(dataframe, rare_perc):
-    temp_df = dataframe.copy()
+    temp_df = dataframe.copy()  ## df kopyası oluşturuldu
 
     rare_columns = [col for col in temp_df.columns if temp_df[col].dtypes == 'O'
-                    and (temp_df[col].value_counts() / len(temp_df) < rare_perc).any(axis=None)]
+                    and (temp_df[col].value_counts() / len(temp_df) < rare_perc).any(axis=None)]  ## eksikliğe yani rare sınıflara sahip değişkenler seçildi
 
-    for var in rare_columns:
-        tmp = temp_df[var].value_counts() / len(temp_df)
-        rare_labels = tmp[tmp < rare_perc].index
-        temp_df[var] = np.where(temp_df[var].isin(rare_labels), 'Rare', temp_df[var])
+    for var in rare_columns:  ## seçilen rare değişkenlerde geziyoruz
+        tmp = temp_df[var].value_counts() / len(temp_df)   ## gezerken temp_df[var] içinden rare olan değişkeni seçiyoruz, oranlarını almak için : value_counts() / gözlem sayısı yapıyoruz = ve tmp şeklinde yeni değişken oluşturuyoruz
+        rare_labels = tmp[tmp < rare_perc].index     ## başta oran olarak girilen rare_perc trashold(kabul edilebilirlik) ile bu orandan düşük olanların indexlerini getiriyorum. rare_labels a atıyorum
+        temp_df[var] = np.where(temp_df[var].isin(rare_labels), 'Rare', temp_df[var])  ## ilgli değişkenin occupation type içindeki rare_labels değişkenlerini görürsen buralara Rare yaz, rare_labels içinde değilse temp_df[var] olarak olduğu gibi bırak diyor
 
     return temp_df
 
@@ -783,6 +818,8 @@ df.head()
 ###################
 # RobustScaler: Medyanı çıkar iqr'a böl.
 ###################
+# RobustScaler, StandardScaler e göre aykırı değerlere karşı daha dayanıklı çünkü bölme esnasında standart sapma yerine iqr kullanılıyor. standart sapma da ortalama da aykırı değerlerden etkilene metriklerdir.
+# ama kullanımı az
 
 rs = RobustScaler()
 df["Age_robuts_scaler"] = rs.fit_transform(df[["Age"]])
@@ -823,7 +860,7 @@ for col in age_cols:
 # Binning
 ###################
 
-df["Age_qcut"] = pd.qcut(df['Age'], 5)
+df["Age_qcut"] = pd.qcut(df['Age'], 5) # qcut bir değişkenin değerlerini küçükten büyüğe sıralar ve 5 e böler
 
 #############################################
 # Feature Extraction (Özellik Çıkarımı)
@@ -836,22 +873,27 @@ df["Age_qcut"] = pd.qcut(df['Age'], 5)
 df = load()
 df.head()
 
-df["NEW_CABIN_BOOL"] = df["Cabin"].notnull().astype('int')
+df["NEW_CABIN_BOOL"] = df["Cabin"].notnull().astype('int')  # cabin değişkeninde NaN olanlara 0 dolu olanlara 1 verir
 
-df.groupby("NEW_CABIN_BOOL").agg({"Survived": "mean"})
+df.groupby("NEW_CABIN_BOOL").agg({"Survived": "mean"})  # yeni oluşturduğumuz değişkene göre gruplayıp survived değişkeninin ortalamasını alalım
 
 from statsmodels.stats.proportion import proportions_ztest
 
-test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_CABIN_BOOL"] == 1, "Survived"].sum(),
-                                             df.loc[df["NEW_CABIN_BOOL"] == 0, "Survived"].sum()],
+test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_CABIN_BOOL"] == 1, "Survived"].sum(), # cabin nu olan ve hayatta kalan kaç kişi var
+                                             df.loc[df["NEW_CABIN_BOOL"] == 0, "Survived"].sum()], # cabin nu olmayan ve hayatta kalan kaç kişi var
 
                                       nobs=[df.loc[df["NEW_CABIN_BOOL"] == 1, "Survived"].shape[0],
                                             df.loc[df["NEW_CABIN_BOOL"] == 0, "Survived"].shape[0]])
-
+# count başarı sayısı, nobs gözlem sayısı
 print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
 
-df.loc[((df['SibSp'] + df['Parch']) > 0), "NEW_IS_ALONE"] = "NO"
-df.loc[((df['SibSp'] + df['Parch']) == 0), "NEW_IS_ALONE"] = "YES"
+# proportions_ztest p-value=0.0000  0.05'ten küçük olduğu için reddedilir yani aralarında istatistiki olarak anlamlı bir fark vardır
+
+
+#SibSp yakın akraba, Parch uzak akraba
+# kişinin akrabası olup olmamasına göre hayatta kalma oranını inceleyelim
+df.loc[((df['SibSp'] + df['Parch']) > 0), "NEW_IS_ALONE"] = "NO"  # yalnız olmayan kişiler
+df.loc[((df['SibSp'] + df['Parch']) == 0), "NEW_IS_ALONE"] = "YES"  # yalnız olan kişiler
 
 df.groupby("NEW_IS_ALONE").agg({"Survived": "mean"})
 
@@ -862,6 +904,7 @@ test_stat, pvalue = proportions_ztest(count=[df.loc[df["NEW_IS_ALONE"] == "YES",
                                             df.loc[df["NEW_IS_ALONE"] == "NO", "Survived"].shape[0]])
 
 print('Test Stat = %.4f, p-value = %.4f' % (test_stat, pvalue))
+# p-value = 0.0000 yine anlamlı fark var (h0 hipotezi)
 
 #############################################
 # Text'ler Üzerinden Özellik Türetmek
@@ -885,29 +928,35 @@ df["NEW_NAME_WORD_COUNT"] = df["Name"].apply(lambda x: len(str(x).split(" ")))
 # Özel Yapıları Yakalamak
 ###################
 
-df["NEW_NAME_DR"] = df["Name"].apply(lambda x: len([x for x in x.split() if x.startswith("Dr")]))
+df["NEW_NAME_DR"] = df["Name"].apply(lambda x: len([x for x in x.split() if x.startswith("Dr")]))  # isminin başında Dr olanları alır ve 1 koyar
 
-df.groupby("NEW_NAME_DR").agg({"Survived": ["mean", "count"]})
+df.groupby("NEW_NAME_DR").agg({"Survived": ["mean", "count"]})  # gruplar, mean -> kaç adet olduklarının ortalamasını gösterir, count -> doktor olanların adedini verir
 
 ###################
 # Regex ile Değişken Türetmek
 ###################
+#regex- regular expressions
 
 df.head()
 
 df['NEW_TITLE'] = df.Name.str.extract(' ([A-Za-z]+)\.', expand=False)
+# extract ile ' ([A-Za-z]+)\.' -> başı boşluk, sonu nokta, küçük ya da büyük harflerden oluşan ifadeleri yakala
+
 
 df[["NEW_TITLE", "Survived", "Age"]].groupby(["NEW_TITLE"]).agg({"Survived": "mean", "Age": ["count", "mean"]})
+# "NEW_TITLE", "Survived", "Age" ı seç,  NEW_TITLE a göre groupby al, Survived ın ortalamasını ve yaş ın sayısı ile ortalamasını al.
 
 #############################################
 # Date Değişkenleri Üretmek
 #############################################
 
-dff = pd.read_csv("datasets/course_reviews.csv")
+dff = pd.read_csv("Modul 2 (week 3)/1-Subjects/datasets/course_reviews.csv")
 dff.head()
 dff.info()
 
+# Timestamp df'den eğişken üreticez ama tipi object tipinde. tipini dönüştürmemiz gerek.
 dff['Timestamp'] = pd.to_datetime(dff["Timestamp"], format="%Y-%m-%d")
+# to_datetime(dff["Timestamp"] ile dönüştürmek istediğimiz objeyi verdik.  format="%Y-%m-%d" le sıralamayı verdik
 
 # year
 dff['year'] = dff['Timestamp'].dt.year
@@ -917,6 +966,7 @@ dff['month'] = dff['Timestamp'].dt.month
 
 # year diff
 dff['year_diff'] = date.today().year - dff['Timestamp'].dt.year
+# date.today().year şuanın yılı - verisetindeki değişkenlerin yılı  = yılların farkı
 
 # month diff (iki tarih arasındaki ay farkı): yıl farkı + ay farkı
 dff['month_diff'] = (date.today().year - dff['Timestamp'].dt.year) * 12 + date.today().month - dff['Timestamp'].dt.month
@@ -954,6 +1004,7 @@ df.loc[(df['SEX'] == 'female') & (df['Age'] >= 50), 'NEW_SEX_CAT'] = 'seniorfema
 df.head()
 
 df.groupby("NEW_SEX_CAT")["Survived"].mean()
+#kadınların hayatta kalma oranı fazla biliyorduk. bunu daha derin inceledik ve genç kadınların yaşlılara göre daha fazla olduğunu gördük
 
 #############################################
 # Titanic Uçtan Uca Feature Engineering & Data Preprocessing
@@ -963,12 +1014,13 @@ df = load()
 df.shape
 df.head()
 
-df.columns = [col.upper() for col in df.columns]
+df.columns = [col.upper() for col in df.columns] # tüm değişkenlerin harflerini büyüttük
 
 #############################################
 # 1. Feature Engineering (Değişken Mühendisliği)
 #############################################
 
+# yeni değişkenlerimizi oluşturuyoruz
 # Cabin bool
 df["NEW_CABIN_BOOL"] = df["CABIN"].notnull().astype('int')
 # Name count
@@ -1009,12 +1061,15 @@ num_cols = [col for col in num_cols if "PASSENGERID" not in col]
 # 2. Outliers (Aykırı Değerler)
 #############################################
 
+#aykırı değer var mı kontrol edelim
 for col in num_cols:
     print(col, check_outlier(df, col))
 
+#eşik değerlerle aykırı değerleri değiştirelim
 for col in num_cols:
     replace_with_thresholds(df, col)
 
+#tekrar aykırı değerlere bakalım
 for col in num_cols:
     print(col, check_outlier(df, col))
 
@@ -1024,13 +1079,16 @@ for col in num_cols:
 
 missing_values_table(df)
 
-df.drop("CABIN", inplace=True, axis=1)
+df.drop("CABIN", inplace=True, axis=1) #cabin değişkenini sildik
 
+# title ve name üzerinden zaten yeni değişken oluşturmuştuk bu yüzden silelim
 remove_cols = ["TICKET", "NAME"]
 df.drop(remove_cols, inplace=True, axis=1)
 
 df["AGE"] = df["AGE"].fillna(df.groupby("NEW_TITLE")["AGE"].transform("median"))
+# oluşturduğumuz NEW_TITLE a göre age değişkeninin eksik değerlerini median ile dolduralım
 
+#şimdi de yaş değişkeninden oluşturduğumuz diğer değişkenleri de baştan oluşturmamız gerek
 df["NEW_AGE_PCLASS"] = df["AGE"] * df["PCLASS"]
 
 df.loc[(df['AGE'] < 18), 'NEW_AGE_CAT'] = 'young'
@@ -1044,12 +1102,16 @@ df.loc[(df['Sex'] == 'female') & (df['Age'] <= 21), 'NEW_SEX_CAT'] = 'youngfemal
 df.loc[(df['Sex'] == 'female') & (df['Age'] > 21) & (df['Age'] < 50), 'NEW_SEX_CAT'] = 'maturefemale'
 df.loc[(df['Sex'] == 'female') & (df['Age'] >= 50), 'NEW_SEX_CAT'] = 'seniorfemale'
 
+# eksik değeri olan sadece embarked kaldı onu da yok edelim
 df = df.apply(lambda x: x.fillna(x.mode()[0]) if (x.dtype == "O" and len(x.unique()) <= 10) else x, axis=0)
+# tipi object olan ve eşsiz değer sayısı 10'dan küçük olan kategorik değişkenleri modları ile doldur
+# artık eksik değer probleminden kurtulduk
 
 #############################################
 # 4. Label Encoding
 #############################################
 
+#eşsiz 2 sınıfa ait olan değişkenleri seç
 binary_cols = [col for col in df.columns if df[col].dtype not in [int, float]
                and df[col].nunique() == 2]
 
@@ -1060,37 +1122,43 @@ for col in binary_cols:
 # 5. Rare Encoding
 #############################################
 
-rare_analyser(df, "SURVIVED", cat_cols)
+# one hot encoder'dan önce olası indirgemeleri yapmak için ilk olarak rare encoding yapıyorum
+rare_analyser(df, "SURVIVED", cat_cols) # çıkan sonuçlarda ratio(oran) sayısı az olanlar kendini belli eder
 
-df = rare_encoder(df, 0.01)
+df = rare_encoder(df, 0.01) # ratio değerine göre Rare olarak birleştirdik
 
-df["NEW_TITLE"].value_counts()
+df["NEW_TITLE"].value_counts() # sayıları kontrol edelim
 
 #############################################
 # 6. One-Hot Encoding
 #############################################
+#burada da veri setindeki tüm kategorik değişkenleri çevirmemiz gerek
 
 ohe_cols = [col for col in df.columns if 10 >= df[col].nunique() > 2]
 
-df = one_hot_encoder(df, ohe_cols)
+df = one_hot_encoder(df, ohe_cols) # yeni oluşturduğum değişkenler var ama  bunlar gereksiz değişken mi yoksa gerekliler mi
 
 df.head()
 df.shape
 
+### Kontrol yapalım her şey yolunda mı
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
 num_cols = [col for col in num_cols if "PASSENGERID" not in col]
 
 rare_analyser(df, "SURVIVED", cat_cols)
+### evet her şey yolunda. Şunları kontrol ediyorum : target ve ratio değerleri düşükse bu bilgi çöp bilgi bunun için ayrı değişken gereksiz silebilirim
 
+# kullanışsız sütunları belirleyelim: (df sınıf sayısı / gözlem sayısı) bunlardan herhangi bir tanesinde 0.01'den küçük 2 sınıflı kategorik değişken varsa bunları getirmesini istiyorum
 useless_cols = [col for col in df.columns if df[col].nunique() == 2 and
                 (df[col].value_counts() / len(df) < 0.01).any(axis=None)]
 
-# df.drop(useless_cols, axis=1, inplace=True)
+# df.drop(useless_cols, axis=1, inplace=True)  -> kullanışsız sütunları bu şekilde istersek silebiliriz
 
 #############################################
 # 7. Standart Scaler
 #############################################
+#Standart Scaler a her zaman ihtiyaç olmayabilir olursa nasıl kullanılır:
 
 scaler = StandardScaler()
 df[num_cols] = scaler.fit_transform(df[num_cols])
@@ -1099,39 +1167,62 @@ df[num_cols].head()
 
 df.head()
 df.shape
+# veri ön işleme ile ilgili işlemlerimiz bitti. artık kullanacak olduğumuz herhangi bir makine öğrenme algoritması bu veri üzerinde çalışabilir
 
 #############################################
 # 8. Model
 #############################################
+# maden verimiz hazır, modelleyelim
 
-y = df["SURVIVED"]
-X = df.drop(["PASSENGERID", "SURVIVED"], axis=1)
+## bağımlı ve bağımsız değişkeni seçelim
+y = df["SURVIVED"] ## bağımlı değişken
+X = df.drop(["PASSENGERID", "SURVIVED"], axis=1) ## bağımsız değişkenler -> "PASSENGERID" ve "SURVIVED" dışındakiler
 
+'''
+Model kurarken genel eğilim, veri seti bütün veriyi görerek ezber yapmasın da 
+bir setiyle eğitilsin (train)
+bir setiyle test edilsin (test)
+bunun için train_test_split yaklaşımını kullanıyor olucaz
+'''
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=17)
 
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier # model nesnesini getirdik
+# ağaç temelli bir yöntem kullanıyoruz
 
-rf_model = RandomForestClassifier(random_state=46).fit(X_train, y_train)
-y_pred = rf_model.predict(X_test)
-accuracy_score(y_pred, y_test)
+rf_model = RandomForestClassifier(random_state=46).fit(X_train, y_train) #bir satırda model kuruldu
+y_pred = rf_model.predict(X_test)  # kurduğumuz modeli kullanarak tahmin edelim test veri setindeki x bağımsız değişken değerlerini modele sorduk. test veri setinin bağımlı değişkenlerini tahmin etmesini istiyoruz
+accuracy_score(y_pred, y_test)  # test setinin y bağımlı değişkeni ile tahmin ettiğim bu değerleri kıyaslıyorum %80 accuracy(doğruluk) skoruna ulaştık -> yani gemiye binen insanlar binmeden önce bana sorsaydı kimin hayatta kalıp kimin öleceğini %80 doğru tahmin edebilirdim
 
 #############################################
 # Hiç bir işlem yapılmadan elde edilecek skor?
 #############################################
+#veri ön işleme yapmadan model kursak sonuç ne olurdu?
 
 dff = load()
-dff.dropna(inplace=True)
-dff = pd.get_dummies(dff, columns=["Sex", "Embarked"], drop_first=True)
-y = dff["Survived"]
-X = dff.drop(["PassengerId", "Survived", "Name", "Ticket", "Cabin"], axis=1)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=17)
+dff.dropna(inplace=True)  # eksik değerleri uçuruyorum
+dff = pd.get_dummies(dff, columns=["Sex", "Embarked"], drop_first=True)  # get_dummies metoduyla "Sex", "Embarked" ı drop_first=True yaparak
+# yani label encoder a da ihtiyacı olmaycak şekilde iki sınıfı da otomatik olarak binary encode etmek istediğimden dolayı bu ayarı yapıyorum
+y = dff["Survived"]  # bağımlı değişkeni seçtim
+X = dff.drop(["PassengerId", "Survived", "Name", "Ticket", "Cabin"], axis=1)  #bağımsız değişkenleri seçtim
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=17)  # ve modeli tekrar kuruyorum
 rf_model = RandomForestClassifier(random_state=46).fit(X_train, y_train)
 y_pred = rf_model.predict(X_test)
-accuracy_score(y_pred, y_test)
+accuracy_score(y_pred, y_test)  # %70 accuracy
 
+'''
+#ek notlar:
+#1201. satırdaki kod olamsaydı -> eksik değerleri yok etmeseydim değişken değerlerinde Nan olduğundan dolayı random forest çalışamazdı. ve hata alırdık
+#bazı ağaca dayalı yöntemlerde Nan eksik değerleri drop etmesek de başarılı çalışan modelimiz olabilir. Ama çoğu modelde bu işleme de ihtiyacımız olacak. Tıpkı bu örenketeki gibi
+#1202.satırdaki get_dummies i yapmasaydık -> string i float a çeviremedim hatası alırdık çünkü
+#labelları string olarak algılayamıyor, bunların matematiksel formları lazım bana diyor.
+#dolayısıyla label encoding, one-hot encoding gereklidir!
+# Özet: eksik değerli dropna ile silmek zorunlu değil ama çoğu modelde gerekli
+# get_dummies ile label encoding, one-hot encoding her model için zorunlu        
+'''
 
 # Yeni ürettiğimiz değişkenler ne alemde?
 
+#1224-1235 feature importence konumuz dışında şuanlık üzerinde durma
 def plot_importance(model, features, num=len(X), save=False):
     feature_imp = pd.DataFrame({'Value': model.feature_importances_, 'Feature': features.columns})
     plt.figure(figsize=(10, 10))
@@ -1145,4 +1236,4 @@ def plot_importance(model, features, num=len(X), save=False):
         plt.savefig('importances.png')
 
 
-plot_importance(rf_model, X_train)
+plot_importance(rf_model, X_train)   # oluşturduğumuz değişkenlerin önemini gösteren tablo
