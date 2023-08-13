@@ -33,13 +33,13 @@ sc = MinMaxScaler((0, 1))
 df = sc.fit_transform(df)
 df[0:5]
 
-kmeans = KMeans(n_clusters=4, random_state=17).fit(df)
+kmeans = KMeans(n_clusters=4, random_state=17).fit(df)  # k-means modeli kuralım
 kmeans.get_params()
 
-kmeans.n_clusters
-kmeans.cluster_centers_
+kmeans.n_clusters  # küme sayısı
+kmeans.cluster_centers_  # kümelerin merkezleri
 kmeans.labels_
-kmeans.inertia_
+kmeans.inertia_   # SSR
 
 ################################
 # Optimum Küme Sayısının Belirlenmesi
@@ -49,21 +49,23 @@ kmeans = KMeans()
 ssd = []
 K = range(1, 30)
 
-for k in K:
-    kmeans = KMeans(n_clusters=k).fit(df)
-    ssd.append(kmeans.inertia_)
+for k in K:   # tüm k ları sırayla alır
+    kmeans = KMeans(n_clusters=k).fit(df)  # bu aralıktaki tüm k ları alcak ve fit etcek
+    ssd.append(kmeans.inertia_)  # sonra inertia_ değerlerini SSD nin içine gönderir
 
+# görselleştirelim
 plt.plot(K, ssd, "bx-")
 plt.xlabel("Farklı K Değerlerine Karşılık SSE/SSR/SSD")
 plt.title("Optimum Küme sayısı için Elbow Yöntemi")
 plt.show()
 
+# KElbowVisualizer dirseklenmenin en fazla olduğu noktayı bize gösterir
 kmeans = KMeans()
 elbow = KElbowVisualizer(kmeans, k=(2, 20))
 elbow.fit(df)
 elbow.show()
 
-elbow.elbow_value_
+elbow.elbow_value_     # dirseklenmenin en fazla olduğu noktayı verir
 
 ################################
 # Final Cluster'ların Oluşturulması
@@ -84,7 +86,7 @@ df["cluster"] = clusters_kmeans
 
 df.head()
 
-df["cluster"] = df["cluster"] + 1
+df["cluster"] = df["cluster"] + 1  # cluster 0 olmasın diye
 
 df[df["cluster"]==5]
 
@@ -99,11 +101,14 @@ df.to_csv("clusters.csv")
 
 df = pd.read_csv("datasets/USArrests.csv", index_col=0)
 
+# uzaklık temelli yöntemler kullanıyoruz bu yüzden standartlaştırma yapmamız gerek
 sc = MinMaxScaler((0, 1))
 df = sc.fit_transform(df)
 
+# linkage birleştirici bir kümeleme yöntemi
 hc_average = linkage(df, "average")
 
+# dendrogram haritası oluşturalım
 plt.figure(figsize=(10, 5))
 plt.title("Hiyerarşik Kümeleme Dendogramı")
 plt.xlabel("Gözlem Birimleri")
@@ -162,21 +167,25 @@ df["kmeans_cluster_no"] = clusters_kmeans
 df = pd.read_csv("datasets/Hitters.csv")
 df.head()
 
+# şuan bu veri setindeki salary değişkeni ile ilgilenmiyoruz
 num_cols = [col for col in df.columns if df[col].dtypes != "O" and "Salary" not in col]
 
 df[num_cols].head()
 
 df = df[num_cols]
-df.dropna(inplace=True)
+df.dropna(inplace=True) # verisetinde eksiklik varsa uçuruyoruz
 df.shape
 
-df = StandardScaler().fit_transform(df)
+df = StandardScaler().fit_transform(df) # standartlaştırmaya ihtiyaç var
 
-pca = PCA()
+pca = PCA() #pca yöntemini getirdik
 pca_fit = pca.fit_transform(df)
 
+'''
+Dolayısıyla bu bileşenlerin başarısını değerIendirebileceğimiz metrik, açıkladıkları varyans oranıdır.
+'''
 pca.explained_variance_ratio_
-np.cumsum(pca.explained_variance_ratio_)
+np.cumsum(pca.explained_variance_ratio_)  #kümülatif varyansları hesapla
 
 
 ################################
@@ -250,6 +259,7 @@ rmse = np.mean(np.sqrt(-cross_val_score(cart, X, y, cv=5, scoring="neg_mean_squa
 cart_params = {'max_depth': range(1, 11),
                "min_samples_split": range(2, 20)}
 
+#hiperparametre opt yapalım
 # GridSearchCV
 cart_best_grid = GridSearchCV(cart,
                               cart_params,
@@ -273,23 +283,30 @@ rmse = np.mean(np.sqrt(-cross_val_score(cart_final, X, y, cv=5, scoring="neg_mea
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 500)
 
-df = pd.read_csv("datasets/breast_cancer.csv")
+df = pd.read_csv("datasets/breast_cancer.csv")  #burada görsel üzerinden nümerik hale getirilmiş değişkenler var
 
+#bağımlı bağımsız değişken seçelim
 y = df["diagnosis"]
 X = df.drop(["diagnosis", "id"], axis=1)
 
+'''
+-veri setini 2 boyuta indircez
+-veri setini görselleştircez
+'''
 
 def create_pca_df(X, y):
-    X = StandardScaler().fit_transform(X)
-    pca = PCA(n_components=2)
-    pca_fit = pca.fit_transform(X)
-    pca_df = pd.DataFrame(data=pca_fit, columns=['PC1', 'PC2'])
-    final_df = pd.concat([pca_df, pd.DataFrame(y)], axis=1)
+    X = StandardScaler().fit_transform(X)  # bağımsız değişkenleri standartlaştır
+    pca = PCA(n_components=2)  #pca hesabı yap
+    pca_fit = pca.fit_transform(X)  #değişken değerlerini dönüştürmüş olacak. yani bileşenleri çıkarmış olacak.
+    pca_df = pd.DataFrame(data=pca_fit, columns=['PC1', 'PC2'])  #bağımlı değişken ile yan yana concat() ederek dışarıya return edecek
+    final_df = pd.concat([pca_df, pd.DataFrame(y)], axis=1)  #fonksiyonumu tanımlıyorum, indiriyorum.
     return final_df
 
 pca_df = create_pca_df(X, y)
 
-def plot_pca(dataframe, target):
+#pca görselleştirme fonksiyonu yazalım
+#fonksiyonu, yani dataframe girdiğimizde target ı girdiğimizde target ın eşsiz sınıflarını bulacak.
+def plot_pca(dataframe, target):  # Bunları torget adında tutacak bir liste halinde
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('PC1', fontsize=15)
@@ -299,7 +316,7 @@ def plot_pca(dataframe, target):
     targets = list(dataframe[target].unique())
     colors = random.sample(['r', 'b', "g", "y"], len(targets))
 
-    for t, color in zip(targets, colors):
+    for t, color in zip(targets, colors): # # her bir target a göre seçim işlemini yapıp 2 boyuta göre scatter plot oluşturacak ve bağımlı değişkenleri grafiğin üzerine işaretliyecek.
         indices = dataframe[target] == t
         ax.scatter(dataframe.loc[indices, 'PC1'], dataframe.loc[indices, 'PC2'], c=color, s=50)
     ax.legend(targets)
@@ -315,9 +332,16 @@ plot_pca(pca_df, "diagnosis")
 
 import seaborn as sns
 df = sns.load_dataset("iris")
+# iris veri seti, çiçeklerin taç yaprak ve çanak yaprak bilgileri üzerine kurulu bir veri seti. seaborn kütüphanesi içerisinden bu veri setini bir getirelim.
 
 y = df["species"]
-X = df.drop(["species"], axis=1)
+X = df.drop(["species"], axis=1)  # xlerin hepsi sayısal değişken yani burada kategorik bir değişken olmaması lazım.
+'''
+PCA ile böyle görselleştirmek istiyorsunuz.
+Bağımlı değişkeni ayırdık zaten, bağımsız değişkenler içerisinde de kategorik değişkenlerin olmaması gerekir.
+Bu durumda kolay bir şekilde aynı işlemleri sadece fonksiyonları çağırarak kolay bir şekilde
+gerçekleştirebilirsiniz.
+'''
 
 pca_df = create_pca_df(X, y)
 
