@@ -1,0 +1,1 @@
+###  **Dengesiz Veri Seti Nedir? Nasıl Başa Çıkılır? - What is Unbalanced Data Set? How to Cope?** dökümanı için [buraya](https://docs.google.com/document/d/1ZFn7xOtYNpXFqHWvTRODa1M4cpqs2PezXrSxub8qPoU/edit?usp=sharing) tıklayınız.

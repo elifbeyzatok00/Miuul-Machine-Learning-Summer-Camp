@@ -45,11 +45,12 @@ X = pd.DataFrame(X_scaled, columns=X.columns)
 # 3. Modeling & Prediction
 ################################################
 
-knn_model = KNeighborsClassifier().fit(X, y)
+knn_model = KNeighborsClassifier().fit(X, y)  # knn i fit ettik
 
-random_user = X.sample(1, random_state=45)
+random_user = X.sample(1, random_state=45)  # rastgele bir kişi seçtik veri setinden
 
-knn_model.predict(random_user)
+knn_model.predict(random_user)  # bu kişi daiabet mi değil mi tahmin etti
+# array([1])
 
 ################################################
 # 4. Model Evaluation
@@ -107,6 +108,7 @@ knn_gs_best.best_params_
 # 6. Final Model
 ################################################
 
+# GridSearchCV'den gelen parametreleri ** kullanarak atayabiliriz
 knn_final = knn_model.set_params(**knn_gs_best.best_params_).fit(X, y)
 
 cv_results = cross_validate(knn_final,
