@@ -41,9 +41,9 @@ kmeans.cluster_centers_  # kümelerin merkezleri
 kmeans.labels_
 kmeans.inertia_   # SSR
 
-################################
+#################################
 # Optimum Küme Sayısının Belirlenmesi
-################################
+#################################
 
 kmeans = KMeans()
 ssd = []
