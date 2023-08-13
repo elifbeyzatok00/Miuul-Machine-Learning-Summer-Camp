@@ -104,11 +104,11 @@ def plot_numerical_col(dataframe, numerical_col):
     plt.xlabel(numerical_col)
     plt.show(block=True)
 
-
+# tüm numerik değişkenleri grafiksel olarak gösterir
 for col in df.columns:
     plot_numerical_col(df, col)
 
-cols = [col for col in df.columns if "Outcome" not in col]
+cols = [col for col in df.columns if "Outcome" not in col]  # bağımlı değişkenler gelsin istemiyorum
 
 
 # for col in cols:
@@ -263,11 +263,15 @@ y_prob = log_model.predict_proba(X_test)[:, 1]
 
 print(classification_report(y_test, y_pred))
 
+# önceki istatistikler (burada model eğitim setiyle hem eğitildi hem test edildi)
 # Accuracy: 0.78
 # Precision: 0.74
 # Recall: 0.58
 # F1-score: 0.65
 
+# yeni istatistikler (burada model eğitim setiyle eğitildi test setiyle yani farklı verilerle test edildi)
+# burada değerler biraz düşümüş yani model görmediği veriye dokunduğunda tahmin sonuçları değişmiş, daha başarısız gibi görünüyor
+#yani bir model doğrulama işlemi gerektiğini anlıyorum
 # Accuracy: 0.77
 # Precision: 0.79
 # Recall: 0.53
@@ -281,6 +285,7 @@ plt.show()
 # AUC
 roc_auc_score(y_test, y_prob)
 
+# burada modeli doğrulamakta zorlandık, çıkan değerlere göre yorum yapmakta zorlandık. aşağıda farklı bir yöntemle bir daha deneyelim
 
 ######################################################
 # Model Validation: 10-Fold Cross Validation
@@ -323,6 +328,12 @@ cv_results['test_f1'].mean()
 
 cv_results['test_roc_auc'].mean()
 # AUC: 0.8327
+
+#elimizdeki veri dengeli değil. Bu yüzden f1 ve auc ye bakacağız.
+# F1-score: 0.6371 ve AUC: 0.8327 iyi sonuçlar
+# yani bu model kayda değer bir modeldir. değişken müh işlemleri yapılmamıştır. çok detaylı veri ön işleme işlemleri yapılmamıştır.
+# ama buna rağmen elde ettiğmiz gayet tatmin edici bir sonuçtur
+
 
 ######################################################
 # Prediction for A New Observation

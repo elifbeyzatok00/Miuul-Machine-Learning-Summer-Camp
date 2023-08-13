@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 # Simple Linear Regression with OLS Using Scikit-Learn
 ######################################################
 
-df = pd.read_csv("Modul3(week4&week5)/1-Subjects/datasets/advertising.csv")
+df = pd.read_csv("Modul3(week4&week5&week6)/1-Subjects/datasets/advertising.csv")
 df.shape
 
 X = df[["TV"]]
@@ -95,23 +95,22 @@ mean_absolute_error(y, y_pred)
 reg_model.score(X, y) # regresyon modeline bağımsız değ ve bağımlı dğ verdik bir score hesapla diyoruz
 # r-kare, veri setindeki bağımsız değişkenlerin bağımlı değişkeni açılama yüzdesi
 # yani bu modelde TV değişkeninin satış değişkenindeki değişikliği açıklama yüzdesi
-#Notes: değişken sayısı arttıkça R kare şişmeye meyillidir. burada düzeltilmiş R kare sayısının da göz önünde bulundurlması gerekir
-# konuya istatistiksel, ekonometrik, iktisadi modeller açısından bakmıyoruz.Bundan dolayı bu modellerin katsayılarının anlamlılığı,modellerin anlamlılığı, f-istatistiği, t-istatistikleri
-# gibi normallik varsayımı ve diğer bazı varsayımlar gibi varsayımlarla,yani özetle istatistiki çıktılarla ilgilenmiyoruz
-# "Burada model anlamlılıkları, katsayı testleri vesaire yapmıyoruz.Konuya makine öğrenmesi açısından yaklaşıyoruz.
-# doğrusal bir formda tahmin etme görevi var ve bu tahmini en yüksek başarıyla elde etmeye çalışacağız.
-# Dolayısıyla aslında basit doğrusal reyesyon da, çoklu doğrusal regresyon yüksek tahmin başarılı modeller değildir.Ama konunun temellerinde olduğu için bu konularla ilgili bir bilgi ediniyoruz.
-# Yani en genelinde bizim gelişmiş regresyon problemleri çözmek için kullanacağımız modeller regresyon modelleri olmayacak.
-# Ağaca dayalı regresyon modelleri olacak, doğrusal regresyon modelleri olmayacak
-
+'''
+ Notes: değişken sayısı arttıkça R kare şişmeye meyillidir. burada düzeltilmiş R kare sayısının da göz önünde bulundurlması gerekir
+ konuya istatistiksel, ekonometrik, iktisadi modeller açısından bakmıyoruz.Bundan dolayı bu modellerin katsayılarının anlamlılığı,modellerin anlamlılığı, f-istatistiği, t-istatistikleri
+ gibi normallik varsayımı ve diğer bazı varsayımlar gibi varsayımlarla,yani özetle istatistiki çıktılarla ilgilenmiyoruz
+ "Burada model anlamlılıkları, katsayı testleri vesaire yapmıyoruz.Konuya makine öğrenmesi açısından yaklaşıyoruz.
+ doğrusal bir formda tahmin etme görevi var ve bu tahmini en yüksek başarıyla elde etmeye çalışacağız.
+ Dolayısıyla aslında basit doğrusal reyesyon da, çoklu doğrusal regresyon yüksek tahmin başarılı modeller değildir.Ama konunun temellerinde olduğu için bu konularla ilgili bir bilgi ediniyoruz.
+ Yani en genelinde bizim gelişmiş regresyon problemleri çözmek için kullanacağımız modeller regresyon modelleri olmayacak.
+ Ağaca dayalı regresyon modelleri olacak, doğrusal regresyon modelleri olmayacak
+'''
 ######################################################
 # Multiple Linear Regression
 ######################################################
 
-df = pd.read_csv("datasets/advertising.csv")
-
+df = pd.read_csv("Modul3(week4&week5&week6)/1-Subjects/datasets/advertising.csv")
 X = df.drop('sales', axis=1)
-
 y = df[["sales"]]
 
 
@@ -121,10 +120,17 @@ y = df[["sales"]]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=1)
 
-y_test.shape
+X_train.shape
+X_test.shape
 y_train.shape
+y_test.shape
 
 reg_model = LinearRegression().fit(X_train, y_train)
+'''
+reg_model = LinearRegression()
+reg_model.fit(X_train, y_train)
+bu şekilde de kullanılabilir
+'''
 
 # sabit (b - bias)
 reg_model.intercept_
@@ -143,15 +149,17 @@ reg_model.coef_
 # radio: 10
 # newspaper: 40
 
-# 2.90
-# 0.0468431 , 0.17854434, 0.00258619
+# 2.90 - bias değeri
+# 0.0468431 , 0.17854434, 0.00258619  - coefficient değerleri
 
+#model denklemini yaz -> mülakat aşaması önemli
 # Sales = 2.90  + TV * 0.04 + radio * 0.17 + newspaper * 0.002
 
-2.90794702 + 30 * 0.0468431 + 10 * 0.17854434 + 40 * 0.00258619
+2.90794702 + 30 * 0.0468431 + 10 * 0.17854434 + 40 * 0.00258619 # = 6.20213102
 
+# bu işlemi fonksiyonel şekilde yapalım, bir yerlere excel formunda vercez diyelim
 yeni_veri = [[30], [10], [40]]
-yeni_veri = pd.DataFrame(yeni_veri).T
+yeni_veri = pd.DataFrame(yeni_veri).T  # array([[6.20213102]])
 
 reg_model.predict(yeni_veri)
 
@@ -163,9 +171,14 @@ reg_model.predict(yeni_veri)
 y_pred = reg_model.predict(X_train)
 np.sqrt(mean_squared_error(y_train, y_pred))
 # 1.73
+'''
+daha önce RMSE hatamız 3.24'tü şimdi 1.73 çok düştü
+yeni değişken eklediğimizde başarı artar. Hata düşer
+'''
 
 # TRAIN RKARE
 reg_model.score(X_train, y_train)
+# 0.89
 
 # Test RMSE
 y_pred = reg_model.predict(X_test)
@@ -174,6 +187,7 @@ np.sqrt(mean_squared_error(y_test, y_pred))
 
 # Test RKARE
 reg_model.score(X_test, y_test)
+# 0.89
 
 
 # 10 Katlı CV RMSE
@@ -231,7 +245,7 @@ def update_weights(Y, b, w, X, learning_rate):
 
 
 # train fonksiyonu
-def train(Y, initial_b, initial_w, X, learning_rate, num_iters):
+def train(Y, initial_b, initial_w, X, learning_rate, num_iters):  # learning_rate, num_iters hiperparametre, yani kullanıcı olarak biz vericez. diğerleri normal parametre veri setinden model buluyor
 
     print("Starting gradient descent at b = {0}, w = {1}, mse = {2}".format(initial_b, initial_w,
                                                                    cost_function(Y, initial_b, initial_w, X)))
