@@ -35,30 +35,33 @@ X = df.drop(["Outcome"], axis=1)
 rf_model = RandomForestClassifier(random_state=17)
 rf_model.get_params()
 
+# hiperparametre optimizasyonu yapmadan değerlerimizi gözlemleyelim
 cv_results = cross_validate(rf_model, X, y, cv=10, scoring=["accuracy", "f1", "roc_auc"])
 cv_results['test_accuracy'].mean()
 cv_results['test_f1'].mean()
 cv_results['test_roc_auc'].mean()
 
+# hiperparametere setimizi girelim
+rf_params = {"max_depth": [5, 8, None], # derinlik
+             "max_features": [3, 5, 7, "auto"],  # değişken sayısı, veri setindeki değişken sayısından fazla olmamalı
+             "min_samples_split": [2, 5, 8, 15, 20], # bir düğümün dallanmaya maruz bırakılıp bırakılmayacağına karar vermek için kaç tane gözlem birimi olması gerektiğini ifade eder
+             "n_estimators": [100, 200, 500]} # random forest için birbirinden bağımsız kullnaılacak olan, fit edilecek olan ağaç sayısı
 
-rf_params = {"max_depth": [5, 8, None],
-             "max_features": [3, 5, 7, "auto"],
-             "min_samples_split": [2, 5, 8, 15, 20],
-             "n_estimators": [100, 200, 500]}
-
-
+# GridSearchCV yöntemi ile bu parametrelerde arama yapalım. cv=5 5 katlı olsun demek, verbose=True döküman oluştursun demek
 rf_best_grid = GridSearchCV(rf_model, rf_params, cv=5, n_jobs=-1, verbose=True).fit(X, y)
 
 rf_best_grid.best_params_
 
+# rf_final set_params **  kullanarak parametreleri set ediyorum.
 rf_final = rf_model.set_params(**rf_best_grid.best_params_, random_state=17).fit(X, y)
 
+# metrikleri kontrol edelim. Doğruluk oranında artış elde ettik
 cv_results = cross_validate(rf_final, X, y, cv=10, scoring=["accuracy", "f1", "roc_auc"])
 cv_results['test_accuracy'].mean()
 cv_results['test_f1'].mean()
 cv_results['test_roc_auc'].mean()
 
-
+# görselleştirmeleri yaparak incelyeyim
 def plot_importance(model, features, num=len(X), save=False):
     feature_imp = pd.DataFrame({'Value': model.feature_importances_, 'Feature': features.columns})
     plt.figure(figsize=(10, 10))
@@ -71,8 +74,11 @@ def plot_importance(model, features, num=len(X), save=False):
     if save:
         plt.savefig('importances.png')
 
-plot_importance(rf_final, X)
+plot_importance(rf_final, X) # importance ile önemli değişkenler geldi
 
+
+# maksimum derinliğe göre bir değerlendirme yapalım. Random forests modelini alıp maksimum derinliği bu aralıklarda değiştirip
+# AUC skorlarına göre bize bir grafik oluşturuyor
 def val_curve_params(model, X, y, param_name, param_range, scoring="roc_auc", cv=10):
     train_score, test_score = validation_curve(
         model, X=X, y=y, param_name=param_name, param_range=param_range, scoring=scoring, cv=cv)
@@ -147,7 +153,7 @@ cv_results['test_roc_auc'].mean()
 xgboost_params = {"learning_rate": [0.1, 0.01],
                   "max_depth": [5, 8],
                   "n_estimators": [100, 500, 1000],
-                  "colsample_bytree": [0.7, 1]}
+                  "colsample_bytree": [0.7, 1]}  # değişkenlerden alınacak olan gözlem sayısıyla ilgili bir parametreymiş.
 
 xgboost_best_grid = GridSearchCV(xgboost_model, xgboost_params, cv=5, n_jobs=-1, verbose=True).fit(X, y)
 
@@ -224,6 +230,7 @@ cv_results['test_roc_auc'].mean()
 ################################################
 
 catboost_model = CatBoostClassifier(random_state=17, verbose=False)
+# verbose=False çünkü CatBoost un çok çirkin bir çıktısı var
 
 cv_results = cross_validate(catboost_model, X, y, cv=5, scoring=["accuracy", "f1", "roc_auc"])
 
@@ -231,8 +238,8 @@ cv_results['test_accuracy'].mean()
 cv_results['test_f1'].mean()
 cv_results['test_roc_auc'].mean()
 
-
-catboost_params = {"iterations": [200, 500],
+# aranacak olan hiperparametre setimizi girelim
+catboost_params = {"iterations": [200, 500], # ağaç sayısı, boosting sayısı, enstimaters sayısı
                    "learning_rate": [0.01, 0.1],
                    "depth": [3, 6]}
 
@@ -251,6 +258,7 @@ cv_results['test_roc_auc'].mean()
 ################################################
 # Feature Importance
 ################################################
+# kurmuş olduğumuz birbirinden farklı modellerin feature importancelarını incelemek istediğimizi düşünelim.
 
 def plot_importance(model, features, num=len(X), save=False):
     feature_imp = pd.DataFrame({'Value': model.feature_importances_, 'Feature': features.columns})
@@ -270,22 +278,36 @@ plot_importance(xgboost_final, X)
 plot_importance(lgbm_final, X)
 plot_importance(catboost_final, X)
 
+# rf_final, gbm_final, xgboost_final ilk üç değişken aynı
+# lgbm_final ilk üç değişken değişti.
+'''
+# Doha gelişmiş veri setlerinde çalışıyor olduğumuzda yani 100'lerce, belki 1.000'Ierce seviyesinde değişken olduğunda
+# bu değişkenlerin her zaman hepsiyle çalışmak istemiyor oluruz. Yeni birçok feature türetiriz.Bu feature'ları bir türetiriz ve bakarız
+# modele katkısı var mı diye. Eğer katkısı varsa onlarla çalışmayı tercih ederiz.
+# İmportance skorları O civarında olan değişkenlerle ilgilenmemeye çalışırız.
+# "Neden?" Çünkü, hiperparametre optimizasyonu sürecini uzatır. Hazırlanacak olan dökümantasyonu uzatır.
+# Eğer bir dizi birbirini takip eden ihtiyaç süreci veritabanı süreciyle ilintili bir veri ise, bu durumda olası o bütün feature lan türetmek
+# bir iştir.Sunucuda bir yüktür gibi sebeplerle 
+yani, basit iyidir, Ochkam'ın usturası prensibince ve Trevor Hastfnin Statistical Leaming kitabında da ifade ettiği gibi; makine öğrenmesi
+model geliştirme sürecindeki temel amacımız mümkün olan en basit haliyle, mümkün olan en başarılı modelleri kurmaya çalışmaktır.
+'''
+
 
 ################################
 # Hyperparameter Optimization with RandomSearchCV (BONUS)
 ################################
-
+# rf_random_params adında bir nesne oluşturuyorum, bir sözlük oluşturuyorum.
 rf_model = RandomForestClassifier(random_state=17)
 
-rf_random_params = {"max_depth": np.random.randint(5, 50, 10),
+rf_random_params = {"max_depth": np.random.randint(5, 50, 10), #5ten 50ye kadar 10 sayı oluştur
                     "max_features": [3, 5, 7, "auto", "sqrt"],
                     "min_samples_split": np.random.randint(2, 50, 20),
                     "n_estimators": [int(x) for x in np.linspace(start=200, stop=1500, num=10)]}
 
 rf_random = RandomizedSearchCV(estimator=rf_model,
                                param_distributions=rf_random_params,
-                               n_iter=100,  # denenecek parametre sayısı
-                               cv=3,
+                               n_iter=100,  # denenecek parametre sayısı, 100 kombinasyon seçildi
+                               cv=3, # 3 katlı cross validation yöntemiyle arama işlemi şu anda gerçekleştiriliyor
                                verbose=True,
                                random_state=42,
                                n_jobs=-1)
@@ -293,9 +315,10 @@ rf_random = RandomizedSearchCV(estimator=rf_model,
 rf_random.fit(X, y)
 
 
-rf_random.best_params_
+rf_random.best_params_ # bize önerecek olduğu en iyi parametre değerlerini inceliyorum
+# burada verdiği değerler iyi mi kötü mü anlamak için model kurmamız gerek
 
-
+# 321-328  model kuralım
 rf_random_final = rf_model.set_params(**rf_random.best_params_, random_state=17).fit(X, y)
 
 cv_results = cross_validate(rf_random_final, X, y, cv=5, scoring=["accuracy", "f1", "roc_auc"])
@@ -303,7 +326,17 @@ cv_results = cross_validate(rf_random_final, X, y, cv=5, scoring=["accuracy", "f
 cv_results['test_accuracy'].mean()
 cv_results['test_f1'].mean()
 cv_results['test_roc_auc'].mean()
+'''
+'n-estimators': 922
+' min-samples-splitl :38,
+'max-features': 'auto',
+'max-depth' : 25)
 
+Bu değerler  üzerinde bir GridSearchCV yapabilirsiniz.
+n-estimators için 900, 950, 1800 gibi değerler koyabilirsiniz.
+Min_samples_split  35, 33, 40, 42 koyabilirsiniz.
+Maksimum derinlik 20, 30, 27, 28 gibi değerler
+'''
 
 ################################
 # Analyzing Model Complexity with Learning Curves (BONUS)

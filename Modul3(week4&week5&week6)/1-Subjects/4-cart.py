@@ -30,13 +30,15 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.tree import DecisionTreeClassifier, export_graphviz, export_text
 from sklearn.metrics import classification_report, roc_auc_score
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_validate, validation_curve
-from skompiler import skompile
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_validate, validation_curve   # görselleştirme kütüphaneleri
+from skompiler import skompile  # sql formunda bazı çıktılar verir
 import graphviz
 
+# gösterimle ilgili ayarlar
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 500)
 
+#bazı uyarıları görmezden gel diyoruz
 warnings.simplefilter(action='ignore', category=Warning)
 
 ################################################
@@ -56,7 +58,7 @@ df = pd.read_csv("datasets/diabetes.csv")
 y = df["Outcome"]
 X = df.drop(["Outcome"], axis=1)
 
-cart_model = DecisionTreeClassifier(random_state=1).fit(X, y)
+cart_model = DecisionTreeClassifier(random_state=1).fit(X, y)  # Cart modelini kuralım
 
 # Confusion matrix için y_pred:
 y_pred = cart_model.predict(X)
@@ -113,10 +115,11 @@ cv_results['test_roc_auc'].mean()
 # 4. Hyperparameter Optimization with GridSearchCV
 ################################################
 
-cart_model.get_params()
+cart_model.get_params() # ön tanımlı değerlere buradan bakıyoruz
 
 cart_params = {'max_depth': range(1, 11),
                "min_samples_split": range(2, 20)}
+# buradaki değerleri ön tanımlı değerlere bakıp oraya göre giriyoruz
 
 cart_best_grid = GridSearchCV(cart_model,
                               cart_params,
@@ -158,7 +161,7 @@ cv_results['test_roc_auc'].mean()
 # 6. Feature Importance
 ################################################
 
-cart_final.feature_importances_
+cart_final.feature_importances_  # değişkenlerin önem düzeylerini verir
 
 def plot_importance(model, features, num=len(X), save=False):
     feature_imp = pd.DataFrame({'Value': model.feature_importances_, 'Feature': features.columns})
@@ -169,8 +172,9 @@ def plot_importance(model, features, num=len(X), save=False):
     plt.title('Features')
     plt.tight_layout()
     plt.show()
+    # 167-174 veri görselleştirme
     if save:
-        plt.savefig('importances.png')
+        plt.savefig('importances.png')   # importance ı görsel olarak eklememizi sağlar
 
 
 plot_importance(cart_final, X, num=5)
@@ -225,7 +229,7 @@ def val_curve_params(model, X, y, param_name, param_range, scoring="roc_auc", cv
     plt.tight_layout()
     plt.legend(loc='best')
     plt.show(block=True)
-
+# block=True ile iki görselin üst üste gelmesini önlerim. ayır ayrı gösteririm
 
 val_curve_params(cart_final, X, y, "max_depth", range(1, 11), scoring="f1")
 
@@ -271,9 +275,9 @@ print(tree_rules)
 
 print(skompile(cart_final.predict).to('python/code'))
 
-print(skompile(cart_final.predict).to('sqlalchemy/sqlite'))
+print(skompile(cart_final.predict).to('sqlalchemy/sqlite'))  # karar kurallarını sql formatında verir
 
-print(skompile(cart_final.predict).to('excel'))
+print(skompile(cart_final.predict).to('excel'))   # karar kurallarının excel halinde çıkartır
 
 
 ################################################
@@ -281,6 +285,7 @@ print(skompile(cart_final.predict).to('excel'))
 ################################################
 
 def predict_with_rules(x):
+    # Extracting Decision Rules kısmında aldığımız çıktıyı return edecek
     return ((((((0 if x[6] <= 0.671999990940094 else 1 if x[6] <= 0.6864999830722809 else
         0) if x[0] <= 7.5 else 1) if x[5] <= 30.949999809265137 else ((1 if x[5
         ] <= 32.45000076293945 else 1 if x[3] <= 10.5 else 0) if x[2] <= 53.0 else
@@ -339,7 +344,7 @@ X.columns
 
 x = [12, 13, 20, 23, 4, 55, 12, 7]
 
-predict_with_rules(x)
+predict_with_rules(x) # yukarıda verdiğim değerlere göre diabet mi değil mi tahmin eder
 
 x = [6, 148, 70, 35, 0, 30, 0.62, 50]
 
@@ -352,13 +357,15 @@ predict_with_rules(x)
 ################################################
 
 joblib.dump(cart_final, "cart_final.pkl")
+#joblib kullanılan kütüphane, dump ile cart_final cart_final.pkl dosyası şeklinde bunu kaydediyoruz
 
 cart_model_from_disc = joblib.load("cart_final.pkl")
+#modeli diskten okuyalım ve load ile yükle diyorum. Aynı dizindeki cart_final.pkl ı yükle diyorum
 
 x = [12, 13, 20, 23, 4, 55, 12, 7]
 
 cart_model_from_disc.predict(pd.DataFrame(x).T)
-
+# predict metodu kullanıdğımdan bun dataframe çevirip transpoze unu alıyorum
 
 
 
