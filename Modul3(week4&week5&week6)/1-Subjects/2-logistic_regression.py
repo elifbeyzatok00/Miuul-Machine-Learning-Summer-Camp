@@ -243,7 +243,7 @@ print(classification_report(y, y_pred))
 # F1-score: 0.65
 
 # ROC AUC
-y_prob = log_model.predict_proba(X)[:, 1]
+y_prob = log_model.predict_proba(X)[:, 1]  # (df) 1. sınıfa ait olma olasılıkları bulunur
 roc_auc_score(y, y_prob)
 # 0.83939
 

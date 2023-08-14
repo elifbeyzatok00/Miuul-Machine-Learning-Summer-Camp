@@ -20,6 +20,10 @@ from xgboost import XGBClassifier
 
 # utils.py
 # helpers.py
+'''
+Bunlar içerisinde projenin ana scriptinde yer kaplamaması için ya da başka Script ler tarafından da kullanılabilecek fonksiyonları banndırdığından dolayı
+bu şekilde dışarıdan çağnlabilir
+'''
 
 # Data Preprocessing & Feature Engineering
 def grab_col_names(dataframe, cat_th=10, car_th=20):
@@ -158,6 +162,7 @@ def base_models(X, y, scoring="roc_auc"):
 # Hyperparameter Optimization
 
 # config.py
+''' dışarıdan ayarlanabilecek olan şeyleri bir konfigürasyon dosyasına koyabiliriz. '''
 
 knn_params = {"n_neighbors": range(2, 50)}
 
@@ -216,26 +221,74 @@ def voting_classifier(best_models, X, y):
 
 
 ################################################
-# Pipeline Main Function
+# Pipeline Main Function - Burada sadece execute ettiğimiz, kalıcı değişiklikler yaptığımız, süreci asıl ilerleten bölümler var.
 ################################################
-
+'''
+Şimdi öyle bir işlem yapmamız lazım ki, örneğin bu python Script ini bir proje dosyası gibi bir sunucu ortamında ya da
+kişisel bir bilgisayarda işletim sistemi seviyesinden çalıştırabiliyor olalım.
+'''
 def main():
-    df = pd.read_csv("datasets/diabetes.csv")
-    X, y = diabetes_data_prep(df)
-    base_models(X, y)
-    best_models = hyperparameter_optimization(X, y)
-    voting_clf = voting_classifier(best_models, X, y)
-    joblib.dump(voting_clf, "voting_clf.pkl")
+    df = pd.read_csv("datasets/diabetes.csv")   # 1-veri tabanından veriyi çek.
+    X, y = diabetes_data_prep(df)  # 2- Daha sonra çekmiş olduğu veriyi veri ön işleme Script inden geçir,
+    # Bunu da dışarıdan çağırmayı tercih edebiliriz ya da bir scriptin içerisinde tutabiliriz.
+    base_models(X, y)  # *- genel modellere bir bak.
+    #Bunu buraya koymayadabiliriz. Bu aslında daha çok research bölümüne özel.
+    best_models = hyperparameter_optimization(X, y)  # 3- Üçüncü adım, hiper parametre optimizasyonu.
+    voting_clf = voting_classifier(best_models, X, y)  # 4-gelen en iyi modelleri al.Bununla bir voting classifier oluştur.
+    joblib.dump(voting_clf, "voting_clf.pkl")  # 5- En son model nesnesini bir yere kaydet
+    # traning sürecini bir pipeline aracılığıyla tamamlamış olduk
     return voting_clf
+
+''' 
+bir pipeline ın şu anda ana amacı uçtan uca çeşitli basamaklardaki veri ön işlemeleri ve benzeri görevleri
+yerine getirerek classifier nesnesini dışarıya kaydetmek.Pkl dosyasını. 
+Bu pkl dosyasını daha sonra farklı bir kodun içerisinde çalıştırabiliriz, çağırabiliriz, kullanabiliriz.
+
+Dolayısıyla bu ana görev kapsamında bu training scriptinde voting_classifier() çalıştırılamayacağından dolayı 
+bunu return etmeyebilirsiniz. Etmemek de iyi bir tercih olabilir.
+'''
+
 
 if __name__ == "__main__":
     print("İşlem başladı")
     main()
 
+'''
+__name__  -> Dunder name
+__main__  -> Dunder main
+yani double underscore un kısasltılmışı 
+
+if __name__ == "__main__":
+    print("İşlem başladı")
+    main()
+Kodunuzun içine girip çalıştırma görevini görmesi için böyle bir blok ekliyoruz
+Bunun temel kullanılma amacı bir Script in, bir python dosyasının tetikleyici bölümü olmasıdır.
+
+bir kişi bir argüman girdiyse, yani dışandan bu Script in içerisini biçimlendirmek, değiştirmek istiyorsa, bu değiştiğinde biçimlendirme işlemini de
+bu ilk run olacak bölümde şekillendirebilirim.
+Dolayısıyla bu gibi birçok amaçla kullanılabilir.
+
+bir python Script ini işletim sistemi seviyesinden yani komut satırı seviyesinden run etmek, çalıştırmak
+istediğimizde böyle bir blok ekleyerek bunu gerçekleştirebiliriz.
+'''
+
+# başka neleri bilmem gerek
 # git github
-# makefile
-# veri tabanlarından
-# log
-# class
-# docker
+# makefile ->
+'''bu projeye bir komut satırı, arayüzü yazmadık.Yani işletim sistemi seviyesinden komutlar vererek bu içerideki Script i biçimlendirebilecek işlemler yapmadık.
+ Buna benzer işlemleri git, github işlemlerini veya çeşitli görevleri makefile kod otomasyon aracıyla yapabiliriz.
+ örn terminalde 
+ make git 
+ dediğimizde sadece bir git, add commit ve push işlemlerini peş peşe yaptırabiliriz.
+Makefile bir kod otomasyonu aracı, linux aracı
+ '''
+# veri tabanlarından  -> Veri tabanlarından veri okumak
+# log  -> süreçlerin log unu tutmak
+# class -> Fonksiyonlan class yapılarına çevirmek
+# docker -> dockerize etmek
+''' Yani benim bilgisayanmda çalışıyordu ifadesi bu docker ı en iyi ifade etmenin yollanndan birisi. 
+Ortak bir işletme projesi, ortak bir işletme prosedürü çerçevesinde dockerize edilmiş projeler docker barındıran tüm ortamlarda
+ilk oluşturulduklan ortamlardaki gibi çalışabilmektedir.Dolayısıyla buradaki dependency management problemlerini gereklilikleri ve benzeri
+noktaları daha iyi proje kapsamını taşıyabilmek adına bir docker istemine sokulabilir.
+'''
 # requirement.txt

@@ -37,6 +37,7 @@ pd.set_option('display.width', 500)
 # 1. Exploratory Data Analysis
 ################################################
 
+#df incelyelim
 def check_df(dataframe, head=5):
     print("##################### Shape #####################")
     print(dataframe.shape)
@@ -51,6 +52,8 @@ def check_df(dataframe, head=5):
     print("##################### Quantiles #####################")
     print(dataframe.quantile([0, 0.05, 0.50, 0.95, 0.99, 1]).T)
 
+#cat_summary() fonksiyonu bir kategorik değişkeni ve bir dataframe verdiğimizde o kategorik değişkenin sınıf frekansını ve sınıflarının oranını ifade ediyor.
+#plot=True argümanı True yaparsak bu durumda ilgili değişken için sütun grafik de oluşturuyor.
 def cat_summary(dataframe, col_name, plot=False):
     print(pd.DataFrame({col_name: dataframe[col_name].value_counts(),
                         "Ratio": 100 * dataframe[col_name].value_counts() / len(dataframe)}))
@@ -59,6 +62,7 @@ def cat_summary(dataframe, col_name, plot=False):
         sns.countplot(x=dataframe[col_name], data=dataframe)
         plt.show(block=True)
 
+# sayısal değişkenleri özetlemek için kullanacağımız fonksiyon
 def num_summary(dataframe, numerical_col, plot=False):
     quantiles = [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 0.99]
     print(dataframe[numerical_col].describe(quantiles).T)
@@ -69,12 +73,14 @@ def num_summary(dataframe, numerical_col, plot=False):
         plt.title(numerical_col)
         plt.show(block=True)
 
+# Bağımlı değişkeni sayısal bir değişken ile özetlemek için bağımlı değişkene göre groupby() a alıyoruz ve sayısal değişkenin ortalamasını alıyoruz.
 def target_summary_with_num(dataframe, target, numerical_col):
     print(dataframe.groupby(target).agg({numerical_col: "mean"}), end="\n\n\n")
 
 def target_summary_with_cat(dataframe, target, categorical_col):
     print(pd.DataFrame({"TARGET_MEAN": dataframe.groupby(categorical_col)[target].mean()}), end="\n\n\n")
 
+#Özetle veri setinin içerisindeki sayısal değişkenlerin birbirleri arasındaki korelasyonu hesaplayacak
 def correlation_matrix(df, cols):
     fig = plt.gcf()
     fig.set_size_inches(10, 8)
@@ -83,6 +89,7 @@ def correlation_matrix(df, cols):
     fig = sns.heatmap(df[cols].corr(), annot=True, linewidths=0.5, annot_kws={'size': 12}, linecolor='w', cmap='RdBu')
     plt.show(block=True)
 
+#Kategorik değişkenleri, sayısal değişkenleri ve kategorik gibi gözüken kardinal değişkenleri veriyordu. Üç tane return ü vardı.
 def grab_col_names(dataframe, cat_th=10, car_th=20):
     """
 
@@ -296,20 +303,33 @@ def diabetes_data_prep(dataframe):
 
     return X, y
 
+##kodlarımızı yazdık
+
+##veri setinin eski halini inceledik
 df = pd.read_csv("datasets/diabetes.csv")
 
 check_df(df)
 
+##tek hamleyle bütün değişkenleri olması gereken forma getirdik,
 X, y = diabetes_data_prep(df)
 
 check_df(X)
 
+''' Şu anda pipeline mızın ilk borusunu döşemiş olduk. '''
 
 ######################################################
 # 3. Base Models
 ######################################################
-
-
+# genelde pipeline da yer almaması gereken bir bölümdür.Yani reseorch aşamasında temel bazı modellere bakılır.
+# Bu modellerden, bu problem için uygun olabileceği kanaatinde olunan bir ya da birden fazla model seçilerek bu modellerin üzerinde hiper parametre optimizasyonları gerçekleştiriliyor olur.
+'''
+# Pratikte zaten birçok senaryoda LightGBM gibi gelişmiş modeller en iyileri olur.
+# Biz şöyle ilerliyor olacağız, birçok temel modele ihtiyacınız olduğunda elinizin altında olsun düşüncesiyle bakıyor olacağız.
+# Daha sonra bu temel modellerden aslında bir tanesini seçip gitmek daha iyi olabilecekken biz üç tanesini seçeceğiz.
+# Bunun üzerinden bir stacking diğer ifadesiyle ensemble
+# learning yaklaşımı ile yani üç tane modele fikrini soracağız.
+# Yani üç modeli bir tahmin görevi için birlikte kullanıyor olacağız
+'''
 def base_models(X, y, scoring="roc_auc"):
     print("Base Models....")
     classifiers = [('LR', LogisticRegression()),
@@ -325,7 +345,7 @@ def base_models(X, y, scoring="roc_auc"):
                    ]
 
     for name, classifier in classifiers:
-        cv_results = cross_validate(classifier, X, y, cv=3, scoring=scoring)
+        cv_results = cross_validate(classifier, X, y, cv=3, scoring=scoring)  # 3katlı validationdan geçir skorunu sor
         print(f"{scoring}: {round(cv_results['test_score'].mean(), 4)} ({name}) ")
 
 base_models(X, y, scoring="accuracy")
@@ -334,7 +354,11 @@ base_models(X, y, scoring="accuracy")
 ######################################################
 # 4. Automated Hyperparameter Optimization
 ######################################################
+'''
+birden fazla modelin birden fazla arama görevini yine bir fonksiyon tanımlayarak otomatik bir şekilde yapıcaz
+'''
 
+# arama yapmak istediğim hiper parametre setlerini veriyorum.
 knn_params = {"n_neighbors": range(2, 50)}
 
 cart_params = {'max_depth': range(1, 20),
@@ -381,9 +405,15 @@ def hyperparameter_optimization(X, y, cv=3, scoring="roc_auc"):
 best_models = hyperparameter_optimization(X, y)
 
 ######################################################
-# 5. Stacking & Ensemble Learning
+# 5. Stacking & Ensemble Learning - Temeli birden fazla modeli bir arada kullanmaya dayanmaktadır.
 ######################################################
+'''
+scikit-leam ü kullanarak bir voting işlemi yapmak stacking işlemi yapmak oldukça kolay. Tabi kendi tanımlamamız gereken yine bir fonksiyonumuz var.
+"Şimdi stacking dedik, ensemble dedik, voting nereden çıktı?”Bunun diğer isimlendirmesi voting dir değerli arkadaşlar. Yani oylama yapacak bu yöntemler.
+Bunun regresyon hali de vardır, sınıflandırma hali de vardır.
+Şu anda biz sınıflandırma halini kullanıyor olacağız.
 
+'''
 def voting_classifier(best_models, X, y):
     print("Voting Classifier...")
 
@@ -404,17 +434,25 @@ voting_clf = voting_classifier(best_models, X, y)
 ######################################################
 # 6. Prediction for a New Observation
 ######################################################
+# Veri setinin içerisinden rastgele bir gözlem birimi seçeceğiz ve bu gözlem birimi için bu modeli kullanarak
+# tahmin işlemi gerçekleştireceğiz.
 
 X.columns
 random_user = X.sample(1, random_state=45)
 voting_clf.predict(random_user)
 
-joblib.dump(voting_clf, "voting_clf2.pkl")
+joblib.dump(voting_clf, "voting_clf2.pkl")  # Bu modeli kaydetmek istediğimi belirtiyorum. modeli kaydettik
 
-new_model = joblib.load("voting_clf2.pkl")
-new_model.predict(random_user)
+new_model = joblib.load("voting_clf2.pkl")  # kaydettiğimiz modeli bir değişkene atadık
+new_model.predict(random_user)  #bu değişkeni çağırdık ve yeni bir gözlem birimi üzerinde denedik
+
+'''
+Daha sonra bakın öncesindeki bütün işlemler kaybolmuş olsa bile
+sadece yeni bir gözlem birimi eğer elimde olursa bu modeli yükledikten sonra bu gözlem birimini sorarak tahmin
+sonucuna erişebilirim.
 
 
+'''
 
 
 
