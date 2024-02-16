@@ -4,9 +4,9 @@
 
 #### 3 modülden oluşan bir eğitim:
 
-- [Modul1 - Python Programming for Data Science]()
-- [Modul2 - Feature Engineering]()
-- [Modul3 - Machine Learning]()
+- [Modul1 - Python Programming for Data Science](<https://github.com/elifbeyzatok00/Miuul-Machine-Learning-Summer-Camp/tree/main/Modul1(week1%26week2)>)
+- [Modul2 - Feature Engineering](<https://github.com/elifbeyzatok00/Miuul-Machine-Learning-Summer-Camp/tree/main/Modul2(week_3)>)
+- [Modul3 - Machine Learning](<https://github.com/elifbeyzatok00/Miuul-Machine-Learning-Summer-Camp/tree/main/Modul3(week4%26week5%26week6)>)
 
 #### Her modül içerisinde 3 klasör var:
 
